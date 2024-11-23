@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+components/SyncUserWithConvex.tsx
 
 # debug
 npm-debug.log*

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Vintage Wooden Chair",
+    "description": "A handcrafted wooden chair with a classic vintage design. Perfect for your living room or study.",
+    "price": 45.99,
+    "condition": "Good"
+  },
+  {
+    "name": "Gaming Laptop",
+    "description": "High-performance gaming laptop with the latest graphics card and 16GB RAM. Includes original charger.",
+    "price": 1200.0,
+    "condition": "Like New"
+  },
+  {
+    "name": "Smartphone - 128GB",
+    "description": "Brand new smartphone with a sleek design and powerful performance. Includes all original accessories.",
+    "price": 599.99,
+    "condition": "Brand New"
+  },
+  {
+    "name": "Mountain Bike",
+    "description": "Durable mountain bike suitable for all terrains. Features a lightweight aluminum frame and 21-speed gears.",
+    "price": 250.0,
+    "condition": "Used"
+  },
+  {
+    "name": "Cookware Set",
+    "description": "10-piece stainless steel cookware set, ideal for all types of cooking. Easy to clean and dishwasher safe.",
+    "price": 85.0,
+    "condition": "Like New"
+  }
+]
