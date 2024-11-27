@@ -1,7 +1,11 @@
+// app/page.tsx
+import ItemGrid from "@/components/ItemGrid";
+
 export default function Home() {
   return (
-    <div className="">
-      <h1> Welcome to Scotty's Shop</h1>
-    </div>
+    <main className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Home Page Test</h1>
+      <ItemGrid />
+    </main>
   );
 }
