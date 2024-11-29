@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Get commission item by ID
 export const getById = query({
@@ -24,7 +25,6 @@ export const search = query({
   handler: async (ctx, args) => {
     let query = ctx.db.query("commItems").order("desc");
 
-    // Apply filters at the query level when possible
     if (args.isAvailable !== undefined) {
       query = query.filter((q) =>
         q.eq(q.field("isAvailable"), args.isAvailable)
@@ -39,7 +39,6 @@ export const search = query({
 
     const items = await query.collect();
 
-    // Apply remaining filters that can't be done at query level
     return items.filter((item) => {
       if (args.minPrice !== undefined && item.price < args.minPrice)
         return false;
@@ -58,6 +57,7 @@ export const search = query({
 // Create new commission item
 export const create = mutation({
   args: {
+    userId: v.string(), // Clerk user ID
     title: v.string(),
     description: v.string(),
     price: v.number(),
@@ -67,18 +67,21 @@ export const create = mutation({
     images: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("Not authenticated");
+    const { userId, ...itemData } = args;
 
-    const userId = await ctx.db
+    // Verify user exists using Clerk ID
+    const user = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("email"), user.email))
-      .unique();
-    if (!userId) throw new Error("User not found");
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
 
     const itemId = await ctx.db.insert("commItems", {
-      ...args,
-      sellerId: userId._id,
+      ...itemData,
+      sellerId: user._id,
       isAvailable: true,
       createdAt: Date.now(),
     });
@@ -90,6 +93,7 @@ export const create = mutation({
 // Update commission item
 export const update = mutation({
   args: {
+    userId: v.string(), // Clerk user ID
     itemId: v.id("commItems"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -101,18 +105,23 @@ export const update = mutation({
     isAvailable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { itemId, ...updates } = args;
+    const { userId, itemId, ...updates } = args;
+
+    // Verify user exists using Clerk ID
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const item = await ctx.db.get(itemId);
     if (!item) throw new Error("Item not found");
 
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("Not authenticated");
-
-    const userId = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("email"), user.email))
-      .unique();
-    if (!userId || userId._id !== item.sellerId) {
+    // Check if user owns the item
+    if (item.sellerId !== user._id) {
       throw new Error("Unauthorized");
     }
 
@@ -123,19 +132,26 @@ export const update = mutation({
 
 // Delete commission item
 export const remove = mutation({
-  args: { itemId: v.id("commItems") },
+  args: {
+    userId: v.string(), // Clerk user ID
+    itemId: v.id("commItems"),
+  },
   handler: async (ctx, args) => {
+    // Verify user exists using Clerk ID
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const item = await ctx.db.get(args.itemId);
     if (!item) throw new Error("Item not found");
 
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new Error("Not authenticated");
-
-    const userId = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("email"), user.email))
-      .unique();
-    if (!userId || userId._id !== item.sellerId) {
+    // Check if user owns the item
+    if (item.sellerId !== user._id) {
       throw new Error("Unauthorized");
     }
 

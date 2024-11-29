@@ -15,6 +15,15 @@ export const TRANSACTION_STATUS = {
   REFUNDED: "refunded",
 } as const;
 
+// Category constants
+export const ITEM_CATEGORIES = {
+  DIGITAL_ART: "Digital Art",
+  TRADITIONAL_ART: "Traditional Art",
+  THREE_D_MODELS: "3D Models",
+  ANIMATIONS: "Animations",
+  OTHER: "Other",
+} as const;
+
 // Item type constants
 export const ITEM_TYPE = {
   COMMISSION: "commission",
@@ -24,6 +33,10 @@ export const ITEM_TYPE = {
 // Type guard functions
 export const isMpItemStatus = (status: string): status is MpItemStatus => {
   return Object.values(MPITEM_STATUS).includes(status as MpItemStatus);
+};
+
+export const isItemCategory = (category: string): category is ItemCategory => {
+  return Object.values(ITEM_CATEGORIES).includes(category as ItemCategory);
 };
 
 export const isTransactionStatus = (
@@ -48,7 +61,8 @@ export type CommissionItem = Doc<"commItems">;
 export type MarketplaceItem = Doc<"mpItems">;
 export type Transaction = Doc<"transactions">;
 export type AnyItem = CommissionItem | MarketplaceItem;
-
+export type ItemCategory =
+  (typeof ITEM_CATEGORIES)[keyof typeof ITEM_CATEGORIES];
 // Type guard for distinguishing between item types
 export const isCommissionItem = (item: AnyItem): item is CommissionItem => {
   return "turnaroundDays" in item;

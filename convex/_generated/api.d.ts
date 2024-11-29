@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as commItems from "../commItems.js";
 import type * as constants from "../constants.js";
+import type * as files from "../files.js";
 import type * as mpItems from "../mpItems.js";
 import type * as users from "../users.js";
 
@@ -29,6 +30,7 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   commItems: typeof commItems;
   constants: typeof constants;
+  files: typeof files;
   mpItems: typeof mpItems;
   users: typeof users;
 }>;

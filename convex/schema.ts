@@ -4,15 +4,22 @@ import { v } from "convex/values";
 import { MPITEM_STATUS, TRANSACTION_STATUS, ITEM_TYPE } from "./constants";
 
 export default defineSchema({
-  // Users table - no changes needed
   users: defineTable({
     name: v.string(),
     email: v.string(),
     avatarUrl: v.optional(v.string()),
+    andrewId: v.string(),
+    clerkId: v.string(),
+    shopBanner: v.optional(v.string()),
+    shopTitle: v.optional(v.string()),
+    shopDescription: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_email", ["email"]),
+  })
+    .index("by_email", ["email"])
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_andrew_id", ["andrewId"]),
 
-  // Commission items - no changes needed
+  // Commission items
   commItems: defineTable({
     sellerId: v.id("users"),
     title: v.string(),
@@ -30,7 +37,7 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_availability", ["isAvailable"]),
 
-  // Marketplace items - add validation for status
+  // Marketplace items
   mpItems: defineTable({
     sellerId: v.id("users"),
     title: v.string(),
@@ -52,7 +59,7 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_status", ["status"]),
 
-  // Transactions - add proper validation for itemType and status
+  // Transaction
   transactions: defineTable({
     buyerId: v.id("users"),
     sellerId: v.id("users"),

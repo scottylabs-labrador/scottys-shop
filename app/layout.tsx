@@ -31,14 +31,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
         <ConvexClientProvider>
           <ClerkProvider>
             <SyncUserWithConvex />
-            <Banner />
-            <Header />
-            {children}
+            <div className="fixed top-0 w-full z-[100]">
+              <Banner />
+              <Header />
+            </div>
+            <main className="min-h-[calc(100vh-4rem)] pt-40 relative z-0">
+              {children}
+            </main>
           </ClerkProvider>
         </ConvexClientProvider>
       </body>

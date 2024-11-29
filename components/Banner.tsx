@@ -27,7 +27,7 @@ const Banner: React.FC = () => {
 
   return (
     <div
-      className="bg-[#C41230] text-white text-center py-4 px-4 relative overflow-hidden"
+      className="bg-[#C41230] text-white text-center py-4 px-4 relative overflow-hidden sticky top-0"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-live="polite"
