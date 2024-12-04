@@ -17,10 +17,10 @@ export const TRANSACTION_STATUS = {
 
 // Category constants
 export const ITEM_CATEGORIES = {
-  DIGITAL_ART: "Digital Art",
-  TRADITIONAL_ART: "Traditional Art",
-  THREE_D_MODELS: "3D Models",
-  ANIMATIONS: "Animations",
+  DIGITAL_ART: "Clothing",
+  TRADITIONAL_ART: "Jewelry",
+  THREE_D_MODELS: "Art",
+  ANIMATIONS: "Shoes",
   OTHER: "Other",
 } as const;
 

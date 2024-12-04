@@ -353,7 +353,7 @@ export default function ShopPage() {
                       className="w-full font-bold mt-4"
                     >
                       <Pencil className="w-4 h-4 mr-2" />
-                      Edit Profile
+                      Edit Shop
                     </Button>
                   ))}
               </div>
