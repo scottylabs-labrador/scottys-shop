@@ -280,10 +280,14 @@ export default function ItemPage() {
 
           {/* Action Buttons */}
           <div className="border-t pt-6">
-            <Button className="w-full mb-3" size="lg" disabled={!canPurchase}>
+            <Button
+              className="w-full mb-3 font-bold"
+              size="lg"
+              disabled={!canPurchase}
+            >
               {isCommissionType ? "Request Commission" : "Purchase Item"}
             </Button>
-            <Button variant="outline" className="w-full" size="lg">
+            <Button variant="outline" className="w-full font-bold" size="lg">
               Contact Seller
             </Button>
           </div>

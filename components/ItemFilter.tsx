@@ -20,11 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal } from "lucide-react";
 import { MPITEM_STATUS } from "@/convex/constants";
+import { ITEM_CATEGORIES } from "@/convex/constants";
 
 interface FilterProps {
   onFilterChange: (filters: any) => void;
   isMarketplace?: boolean;
 }
+
+const categories = Object.values(ITEM_CATEGORIES);
 
 export function ItemFilter({
   onFilterChange,
@@ -58,7 +61,7 @@ export function ItemFilter({
   const filterContent = (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">Price Range</h4>
+        <h4 className="text-sm font-bold">Price Range</h4>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-muted-foreground">Min</label>
@@ -82,29 +85,29 @@ export function ItemFilter({
       </div>
 
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">Category</h4>
+        <h4 className="text-sm font-bold">Category</h4>
         <Select value={category || undefined} onValueChange={setCategory}>
           <SelectTrigger>
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="art">Art</SelectItem>
-            <SelectItem value="design">Design</SelectItem>
-            <SelectItem value="photography">Photography</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       {isMarketplace ? (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Status</h4>
+          <h4 className="text-sm font-bold">Status</h4>
           <Select value={status || undefined} onValueChange={setStatus}>
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value={MPITEM_STATUS.AVAILABLE}>Available</SelectItem>
               <SelectItem value={MPITEM_STATUS.PENDING}>Pending</SelectItem>
               <SelectItem value={MPITEM_STATUS.SOLD}>Sold</SelectItem>
@@ -113,7 +116,7 @@ export function ItemFilter({
         </div>
       ) : (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Max Turnaround Days</h4>
+          <h4 className="text-sm font-bold">Max Turnaround Days</h4>
           <div className="pt-2">
             <Slider
               value={[maxTurnaroundDays]}
