@@ -70,7 +70,7 @@ export const create = mutation({
     price: v.number(),
   },
   handler: async (ctx, args) => {
-    const { userId, ...transactionData } = args;
+    const { userId, sellerId, ...transactionData } = args;
 
     // Verify user exists using Clerk ID
     const user = await ctx.db
@@ -82,9 +82,15 @@ export const create = mutation({
       throw new Error("User not found");
     }
 
+    // User cannot buy their own item/commission
+    if (sellerId === user._id) {
+        throw new Error("Cannot purchase your own item/commision");
+    }
+
     const transactionId = await ctx.db.insert("transactions", {
       ...transactionData,
       buyerId: user._id,           // user who calls the mutation should become the buyer
+      sellerId: sellerId,
       status: TRANSACTION_STATUS.PENDING,
       createdAt: Date.now(),
     });
