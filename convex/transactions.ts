@@ -133,7 +133,7 @@ export const update = mutation({
   },
 });
 
-// Delete transaction (do we want buyer and seller to have the power to do this?)
+// Delete transaction (unsure how we want to handle perms for this yet)
 export const remove = mutation({
   args: {
     userId: v.string(), // Clerk user ID
@@ -152,11 +152,6 @@ export const remove = mutation({
 
     const transaction = await ctx.db.get(args.transactionId);
     if (!transaction) throw new Error("Transaction not found");
-
-    // Check if user is the buyer or seller of the item
-    if (transaction.sellerId !== user._id && transaction.buyerId !== user._id) {
-        throw new Error("Unauthorized");
-      }
 
     await ctx.db.delete(args.transactionId);
     return args.transactionId;
