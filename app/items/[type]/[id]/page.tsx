@@ -30,6 +30,7 @@ export default function ItemPage() {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState(false);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
   // Early return if invalid type
@@ -149,6 +150,16 @@ export default function ItemPage() {
   const canPurchase =
     status === MPITEM_STATUS.AVAILABLE ||
     (isCommissionItem(item) && item.isAvailable);
+
+
+  // creating/updating transactions on button click
+  const createTransaction = useMutation(api.transactions.create);
+  const updateTransaction = useMutation(api.transactions.update);
+
+  const handleClick = async () => {
+    //NEED TO IMPLEMENT CONVEX MUTATION CALLS
+    setIsActive(!isActive);
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -281,11 +292,12 @@ export default function ItemPage() {
           {/* Action Buttons */}
           <div className="border-t pt-6">
             <Button
-              className="w-full mb-3 font-bold"
+              onClick={handleClick}
+              className={`w-full mb-3 font-bold ${isActive ? "bg-gray-400 hover:bg-slate-500" : "bg-black"}`}
               size="lg"
               disabled={!canPurchase}
             >
-              {isCommissionType ? "Request Commission" : "Purchase Item"}
+              {isActive ? "Unrequest" : isCommissionType ? "Request Commission" : "Purchase Item"}
             </Button>
             <Button variant="outline" className="w-full font-bold" size="lg">
               Contact Seller
