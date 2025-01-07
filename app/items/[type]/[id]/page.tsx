@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { MPITEM_STATUS, ITEM_TYPE, isCommissionItem } from "@/convex/constants";
+import { MPITEM_STATUS, ITEM_TYPE, isCommissionItem, TRANSACTION_STATUS } from "@/convex/constants";
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -31,6 +31,7 @@ export default function ItemPage() {
   const [showRightArrow, setShowRightArrow] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
+  const [newTransId, setNewTransId] = useState<Id<"transactions"> | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
   // Early return if invalid type
@@ -155,9 +156,36 @@ export default function ItemPage() {
   // creating/updating transactions on button click
   const createTransaction = useMutation(api.transactions.create);
   const updateTransaction = useMutation(api.transactions.update);
+  
 
   const handleClick = async () => {
-    //NEED TO IMPLEMENT CONVEX MUTATION CALLS
+    if (!user?.id) return;
+    if(!isActive){
+      try{
+        const id = await createTransaction({userId: user.id, sellerId: seller._id, 
+          itemType: (isCommissionType ? ITEM_TYPE.COMMISSION : ITEM_TYPE.MARKETPLACE),
+          itemId: item._id, price: item.price});  // how to get clerkId from user??
+        setNewTransId(id);
+        console.log("Created transaction with ID: ", id);
+      } catch (error){
+        console.error("Error creating transation: ", error);
+      }     
+    }
+    else{
+      if(newTransId === null){
+        console.error("Attempted to unrequest a transaction that should not be active.");
+      }
+      else{
+        try{
+          const oldId = await updateTransaction({userId: user.id, transactionId: newTransId, 
+            status: TRANSACTION_STATUS.CANCELLED});
+          setNewTransId(null);  // is this client sided?
+          console.log("Successfully updated transaction with ID: ", oldId);
+        } catch (error){
+          console.error("Error updating transaction status with error: ", error);
+        }
+      }
+    }
     setIsActive(!isActive);
   }
 
