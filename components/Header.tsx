@@ -53,8 +53,8 @@ const Header = () => {
               <Image
                 src="/assets/logo.png"
                 alt="logo"
-                width={70}
-                height={70}
+                width={60}
+                height={60}
                 className="object-contain"
               />
             </Link>
@@ -64,10 +64,9 @@ const Header = () => {
                 <Link
                   key={item}
                   href={`/${item.toLowerCase()}`}
-                  className="relative text-base text-black font-medium group"
+                  className="relative text-sm text-black font-bold hover:border-b-2 hover:border-[#C41230] py-3"
                 >
-                  <span className="relative z-10 font-bold">{item}</span>
-                  <span className="absolute inset-x-0 bottom-[-2px] h-0.5 bg-[#C41230] transform scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100"></span>
+                  {item}
                 </Link>
               ))}
             </div>
@@ -101,9 +100,8 @@ const Header = () => {
               <SignInButton mode="modal">
                 <button className="flex items-center p-1 group">
                   <MdOutlinePerson className="w-6 h-6" />
-                  <span className="text-sm font-bold relative">
+                  <span className="text-sm font-bold group-hover:border-b-2 group-hover:border-black py-1">
                     Sign in
-                    <span className="absolute inset-x-0 bottom-[-1px] h-0.5 bg-current scale-x-0 transition-transform group-hover:scale-x-100" />
                   </span>
                 </button>
               </SignInButton>
@@ -119,9 +117,8 @@ const Header = () => {
               <SignInButton mode="modal">
                 <button className="flex items-center space-x-2 group">
                   <MdOutlinePerson className="w-6 h-6" />
-                  <span className="font-bold relative">
+                  <span className="text-sm font-bold group-hover:border-b-2 group-hover:border-black pb-2">
                     Sign in
-                    <span className="absolute inset-x-0 bottom-[-1px] h-0.5 bg-current scale-x-0 transition-transform group-hover:scale-x-100" />
                   </span>
                 </button>
               </SignInButton>
@@ -148,7 +145,7 @@ const Header = () => {
               <Link
                 key={item}
                 href={`/${item.toLowerCase()}`}
-                className="block text-base font-bold hover:text-[#C41230]"
+                className="block text-base font-bold hover:border-b-2 hover:border-[#C41230] py-1"
                 onClick={() => setSidebarOpen(false)}
               >
                 {item}
@@ -223,7 +220,7 @@ function CustomProfileDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="outline-none cursor-pointer">
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-8 w-8">
             <AvatarImage
               src={avatarUrl || "/assets/default-avatar.jpg"}
               alt={user?.firstName || "User"}
@@ -234,7 +231,7 @@ function CustomProfileDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-60 p-3"
+        className="w-40 p-1"
         style={{ zIndex: 1000 }}
       >
         <DropdownMenuItem
@@ -246,7 +243,7 @@ function CustomProfileDropdown() {
             className="flex items-center w-full"
           >
             <Store className="mr-3 h-7 w-7" />
-            <span className="text-base font-bold">Manage Shop</span>
+            <span className="text-xs font-bold">Manage Shop</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -254,7 +251,7 @@ function CustomProfileDropdown() {
           className="p-4 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
         >
           <LogOut className="mr-3 h-7 w-7" />
-          <span className="text-base font-bold">Sign Out</span>
+          <span className="text-xs font-bold">Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -20,7 +20,7 @@ const Banner: React.FC = () => {
       setCurrentMessageIndex((prevIndex) =>
         prevIndex === messages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 7000); // Change message every 7 seconds
+    }, 5000); // Change message every 7 seconds
 
     return () => clearInterval(interval);
   }, [isPaused]);
