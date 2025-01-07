@@ -22,6 +22,7 @@ export const search = query({
         v.literal(MPITEM_STATUS.SOLD)
       )
     ),
+    condition: v.optional(v.string()),
     category: v.optional(v.string()),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
@@ -32,6 +33,9 @@ export const search = query({
 
     if (args.status) {
       query = query.filter((q) => q.eq(q.field("status"), args.status));
+    }
+    if (args.condition) {
+      query = query.filter((q) => q.eq(q.field("condition"), args.condition));
     }
     if (args.category) {
       query = query.filter((q) => q.eq(q.field("category"), args.category));

@@ -36,11 +36,11 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ClerkProvider>
             <SyncUserWithConvex />
-            <div className="fixed top-0 w-full z-[100]">
-              <Banner />
-              <Header />
-            </div>
             <main className="min-h-[calc(100vh-4rem)] pt-40 relative z-0">
+              <div className="fixed top-0 w-full z-[100]">
+                <Banner />
+                <Header />
+              </div>
               {children}
             </main>
           </ClerkProvider>
