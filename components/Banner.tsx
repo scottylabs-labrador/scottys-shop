@@ -5,8 +5,8 @@ import React, { useState, useEffect } from "react";
 const messages: string[] = [
   "Welcome to Scotty's Shop!",
   "Check out the student made items!",
-  "For your every day, and every other day needs",
-  "Enjoy the comfort of student to student transactions",
+  "For your every day, and every other day needs.",
+  "Enjoy the comfort of student to student transactions.",
 ];
 
 const Banner: React.FC = () => {
@@ -39,7 +39,7 @@ const Banner: React.FC = () => {
             index === currentMessageIndex ? "opacity-100" : "opacity-0"
           }`}
         >
-          <p className="text-xs md:text-sm font-semibold px-4 select-none">
+          <p className="text-xs md:text-sm font-rubik px-4 select-none">
             {message}
           </p>
         </div>

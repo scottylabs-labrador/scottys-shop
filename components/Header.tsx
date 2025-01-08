@@ -1,186 +1,174 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
-import { FaInbox, FaBars } from "react-icons/fa";
+import { useClerk } from "@clerk/nextjs";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { FaBars } from "react-icons/fa";
 import { MdOutlinePerson } from "react-icons/md";
-import { Search, X, Store, LogOut } from "lucide-react";
-import SearchBar from "./SearchBar";
+import {
+  Search,
+  X,
+  LogOut,
+  Heart,
+  ShoppingCart,
+  Store,
+  User,
+  History,
+  Settings,
+  MessageCircle,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useClerk } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import SearchBar from "./SearchBar";
 
-const Header = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const { signOut } = useClerk();
+const NAVIGATION_ITEMS = ["Marketplace", "Commissions", "Requests"];
+
+interface NavigationLinkProps {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+}
+
+const NavigationLink = ({
+  href,
+  children,
+  className = "",
+  onClick,
+}: NavigationLinkProps) => (
+  <Link
+    href={href}
+    className={`text-black font-rubik font-semibold relative pb-1 group ${className}`}
+    onClick={onClick}
+  >
+    {children}
+    <div className="absolute bottom-[-10px] left-0 w-full h-[3] bg-[#C41230] transform scale-x-0 group-hover:scale-x-100" />
+  </Link>
+);
+
+interface IconButtonProps {
+  icon: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
+  title?: string;
+  className?: string;
+}
+
+const IconButton = ({
+  icon: Icon,
+  onClick,
+  title,
+  className = "p-2 hover:bg-gray-100 rounded-full",
+}: IconButtonProps) => (
+  <button type="button" className={className} onClick={onClick} title={title}>
+    <Icon className="w-6 h-6 hover:text-[#C41230]" />
+  </button>
+);
+
+const MobileMenu = ({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
 
   return (
-    <nav className="border-b py-4 px-8 relative sticky top-0 bg-white">
-      <div className="flex items-center justify-between w-full">
-        {/* Left Side */}
-        <div className="flex items-center">
-          {/* Mobile Menu/Search */}
-          <div className="flex items-center lg:hidden">
-            <button
-              type="button"
-              className="p-1 text-black hover:text-[#C41230]"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+    <div className="fixed inset-0 z-50">
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="fixed top-0 left-0 bottom-0 w-72 bg-white p-6 space-y-6 shadow-xl overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <Image
+            src="/assets/logo.png"
+            alt="Scotty's Shop"
+            width={40}
+            height={40}
+            className="object-contain"
+          />
+          <IconButton icon={X} onClick={onClose} title="Close" />
+        </div>
+        <div className="flex flex-col space-y-4">
+          {NAVIGATION_ITEMS.map((item) => (
+            <Link
+              key={item}
+              href={`/${item.toLowerCase()}`}
+              className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={onClose}
             >
-              <FaBars className="w-6 h-6" />
-            </button>
-            <button
-              type="button"
-              className="ml-3 p-1 text-black hover:text-[#C41230]"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Desktop Logo and Nav */}
-          <div className="hidden lg:flex items-center space-x-8">
-            <Link href="/" className="flex items-center">
-              <Image
-                src="/assets/logo.png"
-                alt="logo"
-                width={60}
-                height={60}
-                className="object-contain"
-              />
+              {item}
             </Link>
-
-            <div className="flex items-center space-x-8">
-              {["Marketplace", "Commissions", "Requests"].map((item) => (
-                <Link
-                  key={item}
-                  href={`/${item.toLowerCase()}`}
-                  className="relative text-sm text-black font-bold hover:border-b-2 hover:border-[#C41230] py-3"
-                >
-                  {item}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Logo */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 lg:hidden">
-          <Link href="/">
-            <Image
-              src="/assets/logo.png"
-              alt="logo"
-              width={70}
-              height={70}
-              className="object-contain"
-            />
-          </Link>
-        </div>
-
-        {/* Right Side */}
-        <div className="flex items-center">
-          {/* Mobile Actions */}
-          <div className="flex items-center lg:hidden space-x-3">
-            <SignedIn>
-              <Link href="/inbox" title="Inbox">
-                <FaInbox className="w-8 h-8 hover:text-[#C41230]" />
-              </Link>
-              <CustomProfileDropdown />
-            </SignedIn>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="flex items-center p-1 group">
-                  <MdOutlinePerson className="w-6 h-6" />
-                  <span className="text-sm font-bold group-hover:border-b-2 group-hover:border-black py-1">
-                    Sign in
-                  </span>
-                </button>
-              </SignInButton>
-            </SignedOut>
-          </div>
-
-          {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-6">
-            <div className="w-96">
-              <SearchBar />
-            </div>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="flex items-center space-x-2 group">
-                  <MdOutlinePerson className="w-6 h-6" />
-                  <span className="text-sm font-bold group-hover:border-b-2 group-hover:border-black pb-2">
-                    Sign in
-                  </span>
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Link href="/inbox" title="Inbox">
-                <FaInbox className="w-8 h-8 hover:text-[#C41230]" />
-              </Link>
-              <CustomProfileDropdown />
-            </SignedIn>
-          </div>
+          ))}
+          <SignedIn>
+            <Link
+              href="/favorites"
+              className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Favorites
+            </Link>
+            <Link
+              href="/messages"
+              className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Messages
+            </Link>
+            <Link
+              href="/dashboard"
+              className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Seller Dashboard
+            </Link>
+            <Link
+              href="/cart"
+              className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Shopping Cart
+            </Link>
+          </SignedIn>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="fixed top-0 left-0 bottom-0 w-64 bg-white p-8 space-y-4">
-            {["Marketplace", "Commissions", "Requests"].map((item) => (
-              <Link
-                key={item}
-                href={`/${item.toLowerCase()}`}
-                className="block text-base font-bold hover:border-b-2 hover:border-[#C41230] py-1"
-                onClick={() => setSidebarOpen(false)}
-              >
-                {item}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Search */}
-      {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-white p-4">
-          <button
-            className="ml-auto block mb-4 hover:text-[#C41230]"
-            onClick={() => setSearchOpen(false)}
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <SearchBar />
-        </div>
-      )}
-    </nav>
+    </div>
   );
 };
 
-function CustomProfileDropdown() {
+const MobileSearch = ({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white p-4">
+      <div className="flex items-center gap-4 mb-4">
+        <IconButton icon={X} onClick={onClose} title="Close" />
+        <div className="flex-1">
+          <SearchBar />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CustomProfileDropdown = () => {
   const { signOut, user } = useClerk();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  // Get user data from Convex
   const userData = useQuery(api.users.getUserByClerkId, {
     clerkId: user?.id || "",
   });
-
-  // Get the getUrl mutation
   const getFileUrl = useMutation(api.files.getUrl);
 
   useEffect(() => {
@@ -189,11 +177,9 @@ function CustomProfileDropdown() {
 
       try {
         if (userData.avatarUrl) {
-          // If it's already a URL (from Clerk), use it directly
           if (userData.avatarUrl.startsWith("http")) {
             setAvatarUrl(userData.avatarUrl);
           } else {
-            // Otherwise, fetch it from Convex storage
             const url = await getFileUrl({
               storageId: userData.avatarUrl,
               userId: user.id,
@@ -201,12 +187,10 @@ function CustomProfileDropdown() {
             setAvatarUrl(url);
           }
         } else if (user.imageUrl) {
-          // Fallback to Clerk avatar if no custom avatar
           setAvatarUrl(user.imageUrl);
         }
       } catch (error) {
         console.error("Error fetching avatar URL:", error);
-        // Fallback to Clerk avatar on error
         if (user.imageUrl) {
           setAvatarUrl(user.imageUrl);
         }
@@ -216,11 +200,33 @@ function CustomProfileDropdown() {
     fetchAvatarUrl();
   }, [userData, user?.id, user?.imageUrl, getFileUrl]);
 
+  const dropdownItems = [
+    {
+      href: `/profile/${userData?.andrewId}`,
+      icon: User,
+      label: "View Profile",
+      className:
+        "p-4 font-rubik focus:bg-gray-100 cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-[#C41230]",
+    },
+    {
+      href: "/account",
+      icon: Settings,
+      label: "Manage Account",
+      className: "p-4 font-rubik focus:bg-gray-100 cursor-pointer",
+    },
+    {
+      href: "/purchases",
+      icon: History,
+      label: "Purchase History",
+      className: "p-4 font-rubik focus:bg-gray-100 cursor-pointer",
+    },
+  ];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="outline-none cursor-pointer">
-          <Avatar className="h-8 w-8">
+        <button className="outline-none cursor-pointer transition-transform hover:scale-105">
+          <Avatar className="h-8 w-8 transition-shadow hover:shadow-lg border-2 border-black">
             <AvatarImage
               src={avatarUrl || "/assets/default-avatar.jpg"}
               alt={user?.firstName || "User"}
@@ -231,31 +237,151 @@ function CustomProfileDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-40 p-1"
+        className="w-60 p-3"
         style={{ zIndex: 1000 }}
       >
-        <DropdownMenuItem
-          asChild
-          className="p-4 focus:bg-gray-100 cursor-pointer"
-        >
-          <Link
-            href={`/shop/${userData?.andrewId}`}
-            className="flex items-center w-full"
-          >
-            <Store className="mr-3 h-7 w-7" />
-            <span className="text-xs font-bold">Manage Shop</span>
-          </Link>
-        </DropdownMenuItem>
+        {dropdownItems.map(({ href, icon: Icon, label, className }) => (
+          <DropdownMenuItem key={href} asChild className={className}>
+            <Link href={href} className="flex items-center w-full">
+              <Icon className="mr-3 h-7 w-7" />
+              <span className="text-sm font-rubik">{label}</span>
+            </Link>
+          </DropdownMenuItem>
+        ))}
         <DropdownMenuItem
           onClick={() => signOut()}
           className="p-4 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
         >
           <LogOut className="mr-3 h-7 w-7" />
-          <span className="text-xs font-bold">Sign Out</span>
+          <span className="text-sm font-rubik">Sign Out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
+
+const Header = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  return (
+    <nav className="border-b py-3 sticky top-0 bg-white z-50 font-rubik">
+      <div className="max-w-8xl mx-auto px-7 flex items-center justify-between gap-4">
+        {/* Left Side */}
+        <div className="flex items-center gap-8 flex-shrink-0">
+          <div className="flex items-center gap-4 lg:hidden">
+            <IconButton
+              icon={FaBars}
+              onClick={() => setSidebarOpen(true)}
+              title="Menu"
+              className="p-2 text-black hover:text-[#C41230] rounded-full hover:bg-gray-100"
+            />
+            <IconButton
+              icon={Search}
+              onClick={() => setSearchOpen(true)}
+              title="Search"
+              className="p-2 text-black hover:text-[#C41230] rounded-full hover:bg-gray-100"
+            />
+          </div>
+
+          <div className="hidden lg:flex items-center gap-8">
+            <Link href="/" className="flex items-center flex-shrink-0">
+              <Image
+                src="/assets/logo.png"
+                alt="Scotty's Shop"
+                width={65}
+                height={65}
+                className="object-contain"
+              />
+            </Link>
+
+            <div className="flex items-center gap-6">
+              {NAVIGATION_ITEMS.map((item) => (
+                <NavigationLink
+                  key={item}
+                  href={`/${item.toLowerCase()}`}
+                  className="relative text-sm whitespace-nowrap font-rubik"
+                >
+                  {item}
+                </NavigationLink>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Logo */}
+        <div className="lg:hidden flex-shrink-0">
+          <Link href="/">
+            <Image
+              src="/assets/logo.png"
+              alt="Scotty's Shop"
+              width={45}
+              height={45}
+              className="object-contain"
+            />
+          </Link>
+        </div>
+
+        {/* Center Search - Desktop */}
+        <div className="hidden lg:block flex-1 max-w-2xl">
+          <SearchBar />
+        </div>
+
+        {/* Right Side - Desktop Shows Icons */}
+        <div className="flex items-center justify-end gap-4 flex-shrink-0">
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-full group">
+                <MdOutlinePerson className="w-6 h-6" />
+                <span className="text-sm font-rubik font-medium group-hover:text-[#C41230] hidden lg:inline">
+                  Sign in
+                </span>
+              </button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <div className="hidden lg:flex items-center gap-4">
+              <Link
+                href="/favorites"
+                title="Favorites"
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <Heart className="w-6 h-6 hover:text-[#C41230]" />
+              </Link>
+              <Link
+                href="/messages"
+                title="Messages"
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <MessageCircle className="w-6 h-6 hover:text-[#C41230]" />
+              </Link>
+              <Link
+                href="/dashboard"
+                title="My Shop"
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <Store className="w-6 h-6 hover:text-[#C41230]" />
+              </Link>
+              <CustomProfileDropdown />
+              <Link
+                href="/cart"
+                title="Shopping Cart"
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <ShoppingCart className="w-6 h-6 hover:text-[#C41230]" />
+              </Link>
+            </div>
+            <div className="lg:hidden">
+              <CustomProfileDropdown />
+            </div>
+          </SignedIn>
+        </div>
+      </div>
+
+      <MobileMenu isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MobileSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+    </nav>
+  );
+};
 
 export default Header;

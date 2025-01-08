@@ -56,7 +56,7 @@ const FormField = ({
   children: React.ReactNode;
 }) => (
   <div>
-    <Label>{label}</Label>
+    <Label className="font-bold">{label}</Label>
     {children}
   </div>
 );
@@ -75,7 +75,7 @@ const ImageUploader = ({
   isUploading: boolean;
 }) => (
   <div>
-    <Label>
+    <Label className="font-bold">
       Images ({images.length}/{MAX_IMAGES})
     </Label>
     <div className="grid grid-cols-5 gap-2 mt-2">
@@ -131,7 +131,7 @@ const TagInput = ({
   onTagRemove: (tag: string) => void;
 }) => (
   <div>
-    <Label>Tags</Label>
+    <Label className="font-bold">Tags</Label>
     <div className="flex flex-wrap gap-2 mb-2">
       {tags.map((tag) => (
         <Badge key={tag} variant="secondary">
@@ -404,12 +404,12 @@ export default function ItemModal({
 
           <div className="flex justify-end gap-2 pt-2 border-t">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              <div className="font-bold">Cancel</div>
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="min-w-[90px]"
+              className="min-w-[90px] font-bold"
             >
               {isSubmitting ? (
                 <>

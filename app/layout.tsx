@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Rubik } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -18,6 +19,12 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const rubik = Rubik({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-rubik",
+});
+
 export const metadata: Metadata = {
   title: "Scotty's Shop",
   description: "By ScottyLabs",
@@ -31,17 +38,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
+        className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} antialiased relative`}
       >
         <ConvexClientProvider>
           <ClerkProvider>
             <SyncUserWithConvex />
-            <main className="min-h-[calc(100vh-4rem)] pt-40 relative z-0">
+            <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0">
               <div className="fixed top-0 w-full z-[100]">
                 <Banner />
                 <Header />
               </div>
-              {children}
+              <div className="max-w-8xl mx-auto px-3">{children}</div>
             </main>
           </ClerkProvider>
         </ConvexClientProvider>

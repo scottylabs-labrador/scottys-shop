@@ -228,12 +228,12 @@ export function ItemFilter({
   const filterTabs =
     activeFilters.length > 0 ? (
       <div className="space-y-2">
-        <h4 className="text-sm font-bold">Selected Filters</h4>
+        <h4 className="text-sm font-rubik font-medium">Selected Filters</h4>
         <div className="flex flex-wrap gap-2">
           {activeFilters.map((filter, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm"
+              className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm font-rubik"
             >
               <span>{filter.displayValue}</span>
               <button
@@ -251,7 +251,7 @@ export function ItemFilter({
   const filterContent = (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h4 className="text-sm font-bold">Price Range</h4>
+        <h4 className="text-sm font-rubik font-medium">Price Range</h4>
         <div className="flex gap-4 items-center">
           <div className="flex-1">
             <Input
@@ -260,11 +260,11 @@ export function ItemFilter({
               onChange={handleMinPriceChange}
               min={0}
               max={priceRange[1]}
-              className="w-full"
+              className="w-full font-rubik"
               placeholder="Min price"
             />
           </div>
-          <span className="text-muted-foreground">to</span>
+          <span className="text-muted-foreground font-rubik">to</span>
           <div className="flex-1">
             <Input
               type="number"
@@ -272,7 +272,7 @@ export function ItemFilter({
               onChange={handleMaxPriceChange}
               min={priceRange[0]}
               max={1000}
-              className="w-full"
+              className="w-full font-rubik"
               placeholder="Max price"
             />
           </div>
@@ -293,14 +293,18 @@ export function ItemFilter({
       </div>
 
       <div className="space-y-2">
-        <h4 className="text-sm font-bold">Category</h4>
+        <h4 className="text-sm font-rubik font-medium">Category</h4>
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="cursor-pointer">
+          <SelectTrigger className="cursor-pointer font-rubik">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
-              <SelectItem key={cat} value={cat} className="cursor-pointer">
+              <SelectItem
+                key={cat}
+                value={cat}
+                className="cursor-pointer font-rubik"
+              >
                 {cat}
               </SelectItem>
             ))}
@@ -310,22 +314,25 @@ export function ItemFilter({
 
       {isMarketplace ? (
         <div className="space-y-2">
-          <h4 className="text-sm font-bold">Condition</h4>
+          <h4 className="text-sm font-rubik font-medium">Condition</h4>
           <Select value={condition} onValueChange={setCondition}>
-            <SelectTrigger className="cursor-pointer">
+            <SelectTrigger className="cursor-pointer font-rubik">
               <SelectValue placeholder="Select condition" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="New" className="cursor-pointer">
+              <SelectItem value="New" className="cursor-pointer font-rubik">
                 New
               </SelectItem>
-              <SelectItem value="Like New" className="cursor-pointer">
+              <SelectItem
+                value="Like New"
+                className="cursor-pointer font-rubik"
+              >
                 Like New
               </SelectItem>
-              <SelectItem value="Good" className="cursor-pointer">
+              <SelectItem value="Good" className="cursor-pointer font-rubik">
                 Good
               </SelectItem>
-              <SelectItem value="Fair" className="cursor-pointer">
+              <SelectItem value="Fair" className="cursor-pointer font-rubik">
                 Fair
               </SelectItem>
             </SelectContent>
@@ -333,7 +340,9 @@ export function ItemFilter({
         </div>
       ) : (
         <div className="space-y-2">
-          <h4 className="text-sm font-bold">Max Turnaround Days</h4>
+          <h4 className="text-sm font-rubik font-medium">
+            Max Turnaround Days
+          </h4>
           <div className="pt-2">
             <div className="h-2 cursor-pointer">
               <Slider
@@ -344,7 +353,7 @@ export function ItemFilter({
                 className="w-full cursor-pointer"
               />
             </div>
-            <span className="text-sm text-muted-foreground mt-2 block">
+            <span className="text-sm font-rubik text-muted-foreground mt-2 block">
               {maxTurnaroundDays} days
             </span>
           </div>
@@ -352,14 +361,10 @@ export function ItemFilter({
       )}
 
       <div className="flex gap-2">
-        <Button onClick={handleFilterChange} className="flex-1 cursor-pointer">
+        <Button onClick={handleFilterChange} className="flex-1 font-rubik">
           Apply
         </Button>
-        <Button
-          variant="outline"
-          onClick={resetFilters}
-          className="cursor-pointer"
-        >
+        <Button variant="outline" onClick={resetFilters} className="font-rubik">
           Reset
         </Button>
       </div>
@@ -369,7 +374,7 @@ export function ItemFilter({
   return (
     <>
       {/* Desktop View */}
-      <div className="hidden md:block w-[250px] p-4 border-r min-h-[calc(100vh-4rem)] sticky top-[8rem]">
+      <div className="hidden md:block w-[250px] p-6 border-r min-h-[calc(100vh-4rem)] sticky top-[8rem]">
         {filterTabs}
         <div className={activeFilters.length > 0 ? "mt-6" : ""}>
           {filterContent}
@@ -382,14 +387,19 @@ export function ItemFilter({
         <div className={activeFilters.length > 0 ? "mt-4" : ""}>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="w-full cursor-pointer">
+              <Button
+                variant="outline"
+                className="w-full cursor-pointer font-rubik"
+              >
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Filters
               </Button>
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
-                <SheetTitle>Filters</SheetTitle>
+                <SheetTitle className="font-rubik font-medium">
+                  Filters
+                </SheetTitle>
               </SheetHeader>
               {filterContent}
             </SheetContent>

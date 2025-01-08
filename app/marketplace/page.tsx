@@ -14,7 +14,6 @@ interface FilterState {
   maxPrice?: number;
   category?: string;
   condition?: string;
-  maxTurnaroundDays?: number;
 }
 
 export default function MarketplacePage() {
@@ -22,19 +21,16 @@ export default function MarketplacePage() {
   const router = useRouter();
 
   // Initialize filters from URL parameters
-  const [filters, setFilters] = useState<FilterState>(() => {
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
-    const category = searchParams.get("category");
-    const condition = searchParams.get("condition");
-
-    return {
-      minPrice: minPrice ? Number(minPrice) : undefined,
-      maxPrice: maxPrice ? Number(maxPrice) : undefined,
-      category: category || undefined,
-      condition: condition || undefined,
-    };
-  });
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    minPrice: searchParams.get("minPrice")
+      ? Number(searchParams.get("minPrice"))
+      : undefined,
+    maxPrice: searchParams.get("maxPrice")
+      ? Number(searchParams.get("maxPrice"))
+      : undefined,
+    category: searchParams.get("category") || undefined,
+    condition: searchParams.get("condition") || undefined,
+  }));
 
   const items = useQuery(api.mpItems.search, filters);
 
@@ -49,8 +45,7 @@ export default function MarketplacePage() {
     if (newFilters.category) params.set("category", newFilters.category);
     if (newFilters.condition) params.set("condition", newFilters.condition);
 
-    const newUrl = params.toString() ? `?${params.toString()}` : "";
-    router.push(newUrl);
+    router.push(params.toString() ? `?${params.toString()}` : "");
     setFilters(newFilters);
   };
 
@@ -63,8 +58,7 @@ export default function MarketplacePage() {
         isMarketplace
         initialFilters={filters}
       />
-
-      <main className="flex-1 p-4">
+      <div className="flex-1 p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((item) => (
             <ItemCard
@@ -79,7 +73,7 @@ export default function MarketplacePage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

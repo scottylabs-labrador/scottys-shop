@@ -1,25 +1,34 @@
 "use client";
-
 import { useUser } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
-import { Id } from "@/convex/_generated/dataModel";
-import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation } from "convex/react";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Clock,
-  DollarSign,
   Tag,
-  ChevronLeft,
+  ChevronUp,
+  ChevronDown,
+  Heart,
+  Truck,
+  ShieldCheck,
   ChevronRight,
+  Star,
+  MessageCircle,
 } from "lucide-react";
-import { MPITEM_STATUS, ITEM_TYPE, isCommissionItem, TRANSACTION_STATUS } from "@/convex/constants";
-import Link from "next/link";
-import Image from "next/image";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import {
+  MPITEM_STATUS,
+  ITEM_TYPE,
+  isCommissionItem,
+  TRANSACTION_STATUS,
+} from "@/convex/constants";
 
 const DEFAULT_AVATAR = "/assets/default-avatar.png";
 
@@ -27,14 +36,14 @@ export default function ItemPage() {
   const params = useParams<{ type: string; id: string }>();
   const { user } = useUser();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
+  const [showUpArrow, setShowUpArrow] = useState(false);
+  const [showDownArrow, setShowDownArrow] = useState(false);
+  const [isMainImageHovered, setIsMainImageHovered] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [newTransId, setNewTransId] = useState<Id<"transactions"> | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
-  // Early return if invalid type
   if (
     params.type !== ITEM_TYPE.COMMISSION &&
     params.type !== ITEM_TYPE.MARKETPLACE
@@ -54,7 +63,6 @@ export default function ItemPage() {
     !isCommissionType ? { itemId: params.id as Id<"mpItems"> } : "skip"
   );
 
-  // Determine the active item
   const item = isCommissionType ? commissionItem : marketplaceItem;
   const seller = useQuery(api.users.getUserById, {
     id: item?.sellerId ?? ("skip" as Id<"users">),
@@ -62,7 +70,6 @@ export default function ItemPage() {
 
   const getFileUrl = useMutation(api.files.getUrl);
 
-  // Get image URLs
   const imageUrls =
     useQuery(api.files.getStorageUrls, {
       storageIds: item?.images ?? [],
@@ -75,9 +82,10 @@ export default function ItemPage() {
   const updateArrows = () => {
     const container = thumbnailContainerRef.current;
     if (container) {
-      setShowLeftArrow(container.scrollLeft > 0);
-      setShowRightArrow(
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 1
+      setShowUpArrow(container.scrollTop > 0);
+      setShowDownArrow(
+        container.scrollTop <
+          container.scrollHeight - container.clientHeight - 1
       );
     }
   };
@@ -94,7 +102,6 @@ export default function ItemPage() {
     }
   }, []);
 
-  // Effect to handle avatar URL
   useEffect(() => {
     const fetchAvatarUrl = async () => {
       if (!seller?.avatarUrl || !seller?.clerkId) return;
@@ -121,23 +128,30 @@ export default function ItemPage() {
   // Early return if data isn't loaded
   if (!item || !seller || validImages.length === 0) return null;
 
-  const handleThumbnailClick = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleThumbnailClick = (index: number) => {
     setCurrentIndex(index);
   };
 
-  const scrollThumbnails = (
-    e: React.MouseEvent,
-    direction: "left" | "right"
-  ) => {
+  const scrollThumbnails = (direction: "up" | "down") => {
+    const container = thumbnailContainerRef.current;
+    if (container) {
+      const scrollAmount = direction === "up" ? -100 : 100;
+      container.scrollBy({ top: scrollAmount, behavior: "smooth" });
+    }
+  };
+
+  const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
     e.preventDefault();
     e.stopPropagation();
 
-    const container = thumbnailContainerRef.current;
-    if (container) {
-      const scrollAmount = direction === "left" ? -64 : 64;
-      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    if (direction === "prev") {
+      setCurrentIndex((current) =>
+        current === 0 ? validImages.length - 1 : current - 1
+      );
+    } else {
+      setCurrentIndex((current) =>
+        current === validImages.length - 1 ? 0 : current + 1
+      );
     }
   };
 
@@ -152,184 +166,245 @@ export default function ItemPage() {
     status === MPITEM_STATUS.AVAILABLE ||
     (isCommissionItem(item) && item.isAvailable);
 
-
-  // creating/updating transactions on button click
+  // Transaction mutations
   const createTransaction = useMutation(api.transactions.create);
   const updateTransaction = useMutation(api.transactions.update);
-  
 
-  const handleClick = async () => {
+  const handleTransaction = async () => {
     if (!user?.id) return;
-    if(!isActive){
-      try{
-        const id = await createTransaction({userId: user.id, sellerId: seller._id, 
-          itemType: (isCommissionType ? ITEM_TYPE.COMMISSION : ITEM_TYPE.MARKETPLACE),
-          itemId: item._id, price: item.price});  // how to get clerkId from user??
+    if (!isActive) {
+      try {
+        const id = await createTransaction({
+          userId: user.id,
+          sellerId: seller._id,
+          itemType: isCommissionType
+            ? ITEM_TYPE.COMMISSION
+            : ITEM_TYPE.MARKETPLACE,
+          itemId: item._id,
+          price: item.price,
+        });
         setNewTransId(id);
         console.log("Created transaction with ID: ", id);
-      } catch (error){
-        console.error("Error creating transation: ", error);
-      }     
-    }
-    else{
-      if(newTransId === null){
-        console.error("Attempted to unrequest a transaction that should not be active.");
+      } catch (error) {
+        console.error("Error creating transaction: ", error);
       }
-      else{
-        try{
-          const oldId = await updateTransaction({userId: user.id, transactionId: newTransId, 
-            status: TRANSACTION_STATUS.CANCELLED});
-          setNewTransId(null);  // is this client sided?
-          console.log("Successfully updated transaction with ID: ", oldId);
-        } catch (error){
-          console.error("Error updating transaction status with error: ", error);
+    } else {
+      if (newTransId === null) {
+        console.error(
+          "Attempted to unrequest a transaction that should not be active."
+        );
+      } else {
+        try {
+          await updateTransaction({
+            userId: user.id,
+            transactionId: newTransId,
+            status: TRANSACTION_STATUS.CANCELLED,
+          });
+          setNewTransId(null);
+        } catch (error) {
+          console.error("Error updating transaction status:", error);
         }
       }
     }
     setIsActive(!isActive);
-  }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Main Image */}
-        <div className="relative w-full h-[600px]">
-          <div className="relative w-full h-full overflow-hidden">
-            <Image
-              loader={({ src }) => src}
-              src={validImages[currentIndex] || ""}
-              alt={`${item.title} ${currentIndex + 1}`}
-              fill
-              className="object-cover"
-              priority={currentIndex === 0}
-            />
+    <div className="container mx-auto px-4 py-8 font-rubik max-w-7xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Left side - Image gallery */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Thumbnail column */}
+          <div className="col-span-2">
+            <div className="relative h-[600px] flex flex-col">
+              {showUpArrow && (
+                <button
+                  className="absolute top-0 z-10 w-full h-8 bg-white/80 hover:bg-white flex items-center justify-center rounded-t-lg"
+                  onClick={() => scrollThumbnails("up")}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+              )}
+
+              <div
+                ref={thumbnailContainerRef}
+                className="h-full w-full overflow-y-auto scrollbar-hide space-y-4 px-2 py-2"
+              >
+                {validImages.map((image, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleThumbnailClick(index)}
+                    className={cn(
+                      "w-full aspect-square relative cursor-pointer",
+                      "rounded-lg overflow-hidden transition-all duration-200",
+                      index === currentIndex
+                        ? "ring-2 ring-black ring-offset-2"
+                        : "hover:ring-1 hover:ring-gray-300 hover:ring-offset-1"
+                    )}
+                  >
+                    <Image
+                      loader={({ src }) => src}
+                      src={image}
+                      alt={`Thumbnail ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {showDownArrow && (
+                <button
+                  className="absolute bottom-0 w-full h-8 bg-white/80 hover:bg-white flex items-center justify-center rounded-b-lg"
+                  onClick={() => scrollThumbnails("down")}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main image */}
+          <div className="col-span-10">
+            <div
+              className="relative w-full aspect-square rounded-xl overflow-hidden"
+              onMouseEnter={() => setIsMainImageHovered(true)}
+              onMouseLeave={() => setIsMainImageHovered(false)}
+            >
+              <Image
+                loader={({ src }) => src}
+                src={validImages[currentIndex]}
+                alt={`Main image ${currentIndex + 1}`}
+                fill
+                className="object-cover"
+                priority={currentIndex === 0}
+              />
+
+              {/* Navigation arrows */}
+              {validImages.length > 1 && isMainImageHovered && (
+                <>
+                  <button
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all duration-200"
+                    onClick={(e) => handleImageNav(e, "prev")}
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-700 rotate-90" />
+                  </button>
+                  <button
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all duration-200"
+                    onClick={(e) => handleImageNav(e, "next")}
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-700 -rotate-90" />
+                  </button>
+                </>
+              )}
+
+              {/* Favorite button */}
+              <button
+                className={cn(
+                  "absolute top-4 right-4 p-2.5 rounded-full bg-white shadow-lg transition-all duration-200",
+                  "hover:bg-gray-100",
+                  isMainImageHovered ? "opacity-100" : "opacity-0"
+                )}
+              >
+                <Heart className="w-5 h-5 text-gray-700" />
+              </button>
+
+              {/* Image navigation dots */}
+              {validImages.length > 1 && (
+                <div
+                  className={cn(
+                    "absolute bottom-6 left-0 right-0 flex justify-center gap-2 transition-all duration-200",
+                    isMainImageHovered ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                  {validImages.map((_, index) => (
+                    <button
+                      key={index}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-200",
+                        index === currentIndex
+                          ? "bg-white w-4"
+                          : "bg-white/60 w-1.5 hover:bg-white/80"
+                      )}
+                      onClick={() => setCurrentIndex(index)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Item Details */}
-        <div className="space-y-6">
-          <div>
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold">{item.title}</h1>
-              <Badge variant={canPurchase ? "default" : "secondary"}>
-                {statusText}
-              </Badge>
-            </div>
-            <p className="text-2xl font-bold mt-2">${item.price.toFixed(2)}</p>
-          </div>
-
+        {/* Details section */}
+        <div className="space-y-8">
           <div className="space-y-4">
-            <p className="text-gray-600">{item.description}</p>
-
-            <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4 text-muted-foreground" />
-              <span>{item.category}</span>
-            </div>
-
-            {isCommissionType ? (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{(item as any).turnaroundDays} days turnaround</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{(item as any).condition}</Badge>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {item.tags.map((tag: string) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
+            <div className="space-y-1 ">
+              <div className="flex justify-between items-start">
+                <h1 className="text-3xl font-semibold">{item.title}</h1>
+                <Badge variant={canPurchase ? "default" : "secondary"}>
+                  {statusText}
                 </Badge>
-              ))}
-            </div>
-
-            {/* Thumbnail Preview */}
-            <div className="relative h-20 mt-6">
-              <div className="absolute inset-0">
-                <div className="relative h-full flex items-center">
-                  {showLeftArrow && (
-                    <button
-                      className="absolute left-0 z-10 h-12 w-8 bg-white/80 hover:bg-white flex items-center justify-center"
-                      onClick={(e) => scrollThumbnails(e, "left")}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  )}
-
-                  <div
-                    ref={thumbnailContainerRef}
-                    className="w-full flex overflow-x-auto scrollbar-hide py-1 px-1"
-                    style={{
-                      paddingLeft: "2px",
-                      paddingRight: "2px",
-                    }}
-                  >
-                    {validImages.map((image, index) => (
-                      <div
-                        key={index}
-                        onClick={(e) => handleThumbnailClick(e, index)}
-                        className={cn(
-                          "flex-shrink-0 w-16 h-16 relative cursor-pointer select-none",
-                          "mr-2 last:mr-0",
-                          index === currentIndex &&
-                            "ring-1 ring-black ring-offset-1"
-                        )}
-                      >
-                        <Image
-                          loader={({ src }) => src}
-                          src={image}
-                          alt={`${item.title} thumbnail ${index + 1}`}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ))}
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                {isCommissionType ? (
+                  <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-green-700">
+                    <Clock className="h-4 w-4 font-bold" />
+                    <span>{(item as any).turnaroundDays}d</span>
                   </div>
-
-                  {showRightArrow && (
-                    <button
-                      className="absolute right-0 h-12 w-8 bg-white/80 hover:bg-white flex items-center justify-center"
-                      onClick={(e) => scrollThumbnails(e, "right")}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                ) : (
+                  <span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                    {" "}
+                    {(item as any).condition}
+                  </span>
+                )}
               </div>
             </div>
-          </div>
+            <p className="text-gray-600 text-lg font-normal">
+              {item.description}
+            </p>
 
-          {/* Seller Info */}
-          <div className="border-t pt-6">
-            <h2 className="font-semibold mb-2">Seller</h2>
+            <div className="rounded-2xl border p-6 bg-white shadow-sm">
+              <p className="text-4xl font-bold">${item.price.toFixed(2)}</p>
+              {/* Action Buttons */}
+              <div className="pt-6 space-y-3">
+                <Button
+                  onClick={handleTransaction}
+                  className={cn(
+                    "w-full font-bold",
+                    isActive
+                      ? "bg-gray-400 hover:bg-slate-500"
+                      : "bg-black hover:bg-gray-800"
+                  )}
+                  size="lg"
+                  disabled={!canPurchase}
+                >
+                  {isActive
+                    ? "Unrequest"
+                    : isCommissionType
+                      ? "Request Commission"
+                      : "Purchase Item"}
+                </Button>
+                <Button
+                  className="w-full font-bold text-black bg-white-100 border-2 border-black hover:bg-gray-200"
+                  size="lg"
+                >
+                  Message Seller
+                </Button>
+              </div>
+            </div>
+
+            {/* Seller Info -- TO BE IMPLEMENTED*/}
             <Link href={`/shop/${seller.andrewId}`}>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+              <div className="flex items-center gap-3 pt-3 px-2">
+                <Avatar className="h-4 w-4 ring-2 ring-offset-2 ring-black">
+                  {" "}
                   <AvatarImage src={avatarUrl || DEFAULT_AVATAR} />
-                  <AvatarFallback>{seller.name[0]}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium !font-bold">{seller.andrewId}</p>
+                  <p className="font-semibold text-sm">{seller.andrewId}</p>
                 </div>
               </div>
             </Link>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="border-t pt-6">
-            <Button
-              onClick={handleClick}
-              className={`w-full mb-3 font-bold ${isActive ? "bg-gray-400 hover:bg-slate-500" : "bg-black"}`}
-              size="lg"
-              disabled={!canPurchase}
-            >
-              {isActive ? "Unrequest" : isCommissionType ? "Request Commission" : "Purchase Item"}
-            </Button>
-            <Button variant="outline" className="w-full font-bold" size="lg">
-              Contact Seller
-            </Button>
           </div>
         </div>
       </div>

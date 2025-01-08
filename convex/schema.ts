@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { MPITEM_STATUS, TRANSACTION_STATUS, ITEM_TYPE } from "./constants";
 
 export default defineSchema({
+  // User Table
   users: defineTable({
     name: v.string(),
     email: v.string(),

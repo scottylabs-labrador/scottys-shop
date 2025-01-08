@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 "use client"
 
 import { api } from "@/convex/_generated/api";
@@ -6,6 +7,8 @@ import { useQuery } from "convex/react";
 import ItemCard from "@/components/ItemCard";
 
 
+=======
+>>>>>>> Stashed changes
 export default function Home() {
   const mpItem = useQuery(api.mpItems.search,{status:MPITEM_STATUS.AVAILABLE});
   const commItem = useQuery(api.commItems.search,{isAvailable: true});
@@ -34,9 +37,10 @@ export default function Home() {
               )}
             </div>
           </div>
-            
+
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
+<<<<<<< Updated upstream
               <div className="font-bold text-xl mb-2">Featured Commission</div>
               {commItem && commItem.length > 0 ? (
                 <ItemCard
@@ -48,6 +52,10 @@ export default function Home() {
                 No commissions found
               </p>
               )}
+=======
+              <div className="font-bold text-xl mb-2">Commissions</div>
+              <p className="text-gray-700 text-base">Featured commission</p>
+>>>>>>> Stashed changes
             </div>
           </div>
         </div>

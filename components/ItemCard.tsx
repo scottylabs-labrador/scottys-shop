@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -22,10 +22,7 @@ interface ItemCardProps {
 
 export default function ItemCard({ itemId, type }: ItemCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
-  const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   const item = useQuery(
     type === ITEM_TYPE.COMMISSION ? api.commItems.getById : api.mpItems.getById,
@@ -46,163 +43,124 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
     (url): url is string => typeof url === "string" && url.trim() !== ""
   );
 
-  const updateArrows = () => {
-    const container = thumbnailContainerRef.current;
-    if (container) {
-      setShowLeftArrow(container.scrollLeft > 0);
-      setShowRightArrow(
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 1
-      );
-    }
-  };
-
-  useEffect(() => {
-    updateArrows();
-  }, [validImages]);
-
-  useEffect(() => {
-    const container = thumbnailContainerRef.current;
-    if (container) {
-      container.addEventListener("scroll", updateArrows);
-      return () => container.removeEventListener("scroll", updateArrows);
-    }
-  }, []);
-
   if (!item || validImages.length === 0) {
     return null;
   }
 
-  const handleThumbnailClick = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentIndex(index);
-  };
-
-  const scrollThumbnails = (
-    e: React.MouseEvent,
-    direction: "left" | "right"
-  ) => {
+  const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
     e.preventDefault();
     e.stopPropagation();
 
-    const container = thumbnailContainerRef.current;
-    if (container) {
-      const scrollAmount = direction === "left" ? -64 : 64;
-      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
-  };
-
-  const ItemStatusBadge = () => {
-    if (isCommissionItem(item)) {
-      return (
-        <span className="text-green-800 text-md font-bold">
-          {item.turnaroundDays} Day Turnaround
-        </span>
+    if (direction === "prev") {
+      setCurrentIndex((current) =>
+        current === 0 ? validImages.length - 1 : current - 1
+      );
+    } else {
+      setCurrentIndex((current) =>
+        current === validImages.length - 1 ? 0 : current + 1
       );
     }
-
-    return (
-      <span className="text-blue-800 text-md font-bold">{item.condition}</span>
-    );
   };
 
   return (
-    <Link
-      href={`/items/${type}/${itemId}`}
-      className="group block w-full max-w-[325px] bg-white"
+    <div
+      className="group font-rubik shadow-sm relative w-full max-w-[325px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative w-full h-[375px]">
-        <div className="relative w-full h-[calc(100%-80px)] overflow-hidden">
+      <Link href={`/items/${type}/${itemId}`}>
+        <div className="relative w-full aspect-square">
           <Image
             loader={({ src }) => src}
-            src={
-              validImages[
-                hoveredIndex !== null ? hoveredIndex : currentIndex
-              ] || ""
-            }
+            src={validImages[currentIndex] || ""}
             alt={`${item.title} ${currentIndex + 1}`}
             fill
-            className="object-cover transition-transform duration-300"
+            className="object-cover"
             priority={currentIndex === 0}
           />
+
+          {/* Navigation arrows */}
+          {validImages.length > 1 && isHovered && (
+            <>
+              <button
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center transition-opacity duration-200"
+                onClick={(e) => handleImageNav(e, "prev")}
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center transition-opacity duration-200"
+                onClick={(e) => handleImageNav(e, "next")}
+              >
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </>
+          )}
+
+          {/* Favorite button */}
+          <button
+            className={cn(
+              "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-opacity duration-200",
+              "hover:bg-gray-100",
+              isHovered ? "opacity-100" : "opacity-0"
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Favorite functionality will be implemented later
+            }}
+          >
+            <Heart className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Image navigation dots */}
+          {validImages.length > 1 && (
+            <div
+              className={cn(
+                "absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 transition-opacity duration-200",
+                isHovered ? "opacity-100" : "opacity-0"
+              )}
+            >
+              {validImages.map((_, index) => (
+                <button
+                  key={index}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all",
+                    index === currentIndex
+                      ? "bg-white w-3"
+                      : "bg-white/60 hover:bg-white/80"
+                  )}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCurrentIndex(index);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="relative h-20">
-          <div className="absolute inset-0">
-            <div className="relative h-full flex items-center">
-              {showLeftArrow && (
-                <button
-                  className="absolute left-0 z-10 h-12 w-8 bg-white/80 hover:bg-white flex items-center justify-center"
-                  onClick={(e) => scrollThumbnails(e, "left")}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-              )}
+        <div className="p-3 space-y-1">
+          <h3 className="text-md line-clamp-2">{item.title}</h3>
 
-              <div
-                ref={thumbnailContainerRef}
-                className="w-full flex overflow-x-auto scrollbar-hide py-1 px-1"
-                style={{
-                  marginTop: "-20px",
-                  marginBottom: "-20px",
-                  paddingLeft: "2px",
-                  paddingRight: "2px",
-                }}
-              >
-                {validImages.map((image, index) => (
-                  <div
-                    key={index}
-                    onClick={(e) => handleThumbnailClick(e, index)}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                    className={cn(
-                      "flex-shrink-0 w-8 h-8 relative cursor-pointer select-none",
-                      "mr-2 last:mr-0",
-                      index === currentIndex &&
-                        "ring-1 ring-black ring-offset-1",
-                      index !== currentIndex &&
-                        "hover:scale-110 transition-transform duration-200 hover:ring-1 hover:ring-gray-400 cursor-pointer"
-                    )}
-                  >
-                    <Image
-                      loader={({ src }) => src}
-                      src={image}
-                      alt={`${item.title} thumbnail ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-bold text-gray-900">
+              ${item.price.toFixed(2)}
+            </span>
 
-              {showRightArrow && (
-                <button
-                  className="absolute right-0 h-12 w-8 bg-white/80 hover:bg-white flex items-center justify-center"
-                  onClick={(e) => scrollThumbnails(e, "right")}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            {isCommissionItem(item) ? (
+              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                {item.turnaroundDays}d
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                {item.condition}
+              </span>
+            )}
           </div>
         </div>
-      </div>
-
-      <div className="pt-0 space-y-0 w-[calc(100%-1px)]">
-        <div>
-          <ItemStatusBadge />
-        </div>
-        <div>
-          <p className="pt-2 font-semibold text-base text-gray-900 group-hover:text-gray-700 transition-colors">
-            {item.title}
-          </p>
-          <p className="pt-1 text-xs text-black">{item.category}</p>
-        </div>
-
-        <div className="pt-1 flex flex-col gap-1">
-          <span className="text-sm text-black">${item.price.toFixed(2)}</span>
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
