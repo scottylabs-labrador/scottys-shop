@@ -3,12 +3,14 @@ import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 
+// Generate a URL for file upload
 export const generateUploadUrl = mutation({
   args: {
     userId: v.string(),
     contentType: v.string(),
   },
   handler: async (ctx, args) => {
+    // Verify user exists in database
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
@@ -22,13 +24,14 @@ export const generateUploadUrl = mutation({
   },
 });
 
+// Get URL for a single storage ID
 export const getUrl = mutation({
   args: {
     storageId: v.string(),
     userId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Verify the user exists
+    // Check user authentication
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
@@ -38,13 +41,13 @@ export const getUrl = mutation({
       throw new Error("User not found");
     }
 
-    // If the storageId is already a URL, return it directly
+    // Return if storageId is already a URL
     if (args.storageId.startsWith("http")) {
       return args.storageId;
     }
 
     try {
-      // Handle case where storageId might be a stringified object
+      // Parse storageId if it's a JSON string
       const parsedStorageId =
         typeof args.storageId === "string" && args.storageId.startsWith("{")
           ? JSON.parse(args.storageId).storageId
@@ -59,30 +62,30 @@ export const getUrl = mutation({
   },
 });
 
+// Get URLs for multiple storage IDs
 export const getStorageUrls = query({
   args: { storageIds: v.array(v.string()) },
   handler: async (ctx, args) => {
     const urls = [];
 
     for (const storageId of args.storageIds) {
-      // If it's already a URL, use it directly
+      // Use existing URL if provided
       if (storageId.startsWith("http")) {
         urls.push(storageId);
         continue;
       }
 
       try {
-        // Parse the storage ID if it's a stringified object
+        // Parse JSON storage ID if needed
         const parsedStorageId = storageId.startsWith("{")
           ? JSON.parse(storageId).storageId
           : storageId;
 
-        // Await each URL resolution
         const url = await ctx.storage.getUrl(parsedStorageId);
         urls.push(url);
       } catch (e) {
         console.error("Error processing storage ID:", storageId, e);
-        urls.push(""); // Push empty string for invalid storage IDs
+        urls.push("");
       }
     }
 

@@ -1,4 +1,3 @@
-// schema.ts
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { MPITEM_STATUS, TRANSACTION_STATUS, ITEM_TYPE } from "./constants";
@@ -14,11 +13,13 @@ export default defineSchema({
     shopBanner: v.optional(v.string()),
     shopTitle: v.optional(v.string()),
     shopDescription: v.optional(v.string()),
+    favorites: v.array(v.string()),
     createdAt: v.number(),
   })
     .index("by_email", ["email"])
     .index("by_clerk_id", ["clerkId"])
-    .index("by_andrew_id", ["andrewId"]),
+    .index("by_andrew_id", ["andrewId"])
+    .index("by_favorites", ["favorites"]),
 
   // Commission items
   commItems: defineTable({

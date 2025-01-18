@@ -59,7 +59,7 @@ export default function MarketplacePage() {
         initialFilters={filters}
       />
       <div className="flex-1 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ">
           {items.map((item) => (
             <ItemCard
               key={item._id}

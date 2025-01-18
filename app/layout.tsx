@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Rubik } from "next/font/google";
+import { Playfair_Display, Rubik } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -23,6 +23,12 @@ const rubik = Rubik({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-rubik",
+});
+
+const playfair_display = Playfair_Display({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-playfair-display",
 });
 
 export const metadata: Metadata = {

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useUser } from "@clerk/nextjs";
 import {
   ITEM_TYPE,
   type ItemType,
@@ -15,30 +16,52 @@ import {
   isCommissionItem,
 } from "@/convex/constants";
 
+// Define component props
 interface ItemCardProps {
   itemId: Id<"commItems"> | Id<"mpItems">;
   type: ItemType;
 }
 
 export default function ItemCard({ itemId, type }: ItemCardProps) {
+  // State for image carousel and hover effects
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Auth and user state
+  const { user } = useUser();
+  const userId = user?.id as Id<"users">;
+
+  // Create favorite item ID with type prefix
+  const favoriteItemId = `${type === ITEM_TYPE.COMMISSION ? "comm" : "mp"}_${itemId}`;
+
+  // Mutations and queries
+  const addToFavorites = useMutation(api.users.addFavorite);
+  const removeFromFavorites = useMutation(api.users.removeFavorite);
+
+  // Check if item is favorited
+  const isFavorited = useQuery(
+    api.users.isFavorited,
+    userId
+      ? {
+          userId,
+          itemId: favoriteItemId,
+        }
+      : "skip"
+  );
+
+  // Fetch item data based on type
   const item = useQuery(
     type === ITEM_TYPE.COMMISSION ? api.commItems.getById : api.mpItems.getById,
     { itemId: itemId as any }
   );
 
-  const seller = useQuery(
-    api.users.getUserById,
-    item?.sellerId ? { id: item.sellerId as Id<"users"> } : "skip"
-  );
-
+  // Get image URLs from storage
   const imageUrls =
     useQuery(api.files.getStorageUrls, {
       storageIds: item?.images ?? [],
     }) ?? [];
 
+  // Filter out invalid image URLs
   const validImages = imageUrls.filter(
     (url): url is string => typeof url === "string" && url.trim() !== ""
   );
@@ -47,6 +70,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
     return null;
   }
 
+  // Handle image navigation
   const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,13 +86,42 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
     }
   };
 
+  // Handle favoriting/unfavoriting
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId) {
+      // TODO: Show login prompt
+      return;
+    }
+
+    try {
+      if (isFavorited) {
+        await removeFromFavorites({
+          userId,
+          itemId: favoriteItemId,
+        });
+      } else {
+        await addToFavorites({
+          userId,
+          itemId: favoriteItemId,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating favorites:", error);
+      // TODO: Show error toast
+    }
+  };
+
   return (
     <div
-      className="group font-rubik shadow-sm relative w-full max-w-[325px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+      className="group font-rubik shadow-sm relative w-full max-w-[275px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link href={`/items/${type}/${itemId}`}>
+        {/* Image container */}
         <div className="relative w-full aspect-square">
           <Image
             loader={({ src }) => src}
@@ -79,7 +132,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
             priority={currentIndex === 0}
           />
 
-          {/* Navigation arrows */}
+          {/* Navigation arrows - shown on hover */}
           {validImages.length > 1 && isHovered && (
             <>
               <button
@@ -97,23 +150,27 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
             </>
           )}
 
-          {/* Favorite button */}
-          <button
-            className={cn(
-              "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-opacity duration-200",
-              "hover:bg-gray-100",
-              isHovered ? "opacity-100" : "opacity-0"
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Favorite functionality will be implemented later
-            }}
-          >
-            <Heart className="w-5 h-5 text-gray-700" />
-          </button>
+          {/* Favorite button - shown on hover */}
+          {isFavorited ? (
+            <button
+              className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200"
+              onClick={handleFavoriteClick}
+            >
+              <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
+            </button>
+          ) : (
+            <button
+              className={cn(
+                "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
+                isHovered ? "opacity-80" : "opacity-0"
+              )}
+              onClick={handleFavoriteClick}
+            >
+              <Heart className={cn("w-5 h-5")} />
+            </button>
+          )}
 
-          {/* Image navigation dots */}
+          {/* Image pagination dots */}
           {validImages.length > 1 && (
             <div
               className={cn(
@@ -141,6 +198,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
           )}
         </div>
 
+        {/* Item details */}
         <div className="p-3 space-y-1">
           <h3 className="text-md line-clamp-2">{item.title}</h3>
 
@@ -149,6 +207,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
               ${item.price.toFixed(2)}
             </span>
 
+            {/* Show turnaround days for commission items, condition for marketplace items */}
             {isCommissionItem(item) ? (
               <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
                 {item.turnaroundDays}d

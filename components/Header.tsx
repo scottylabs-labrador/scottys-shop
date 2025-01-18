@@ -30,8 +30,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SearchBar from "./SearchBar";
 
+// Navigation items for header menu
 const NAVIGATION_ITEMS = ["Marketplace", "Commissions", "Requests"];
 
+// Reusable navigation link component
 interface NavigationLinkProps {
   href: string;
   children: React.ReactNode;
@@ -55,6 +57,7 @@ const NavigationLink = ({
   </Link>
 );
 
+// Reusable icon button component
 interface IconButtonProps {
   icon: React.ComponentType<{ className?: string }>;
   onClick?: () => void;
@@ -73,6 +76,7 @@ const IconButton = ({
   </button>
 );
 
+// Mobile menu component
 const MobileMenu = ({
   isOpen,
   onClose,
@@ -142,6 +146,7 @@ const MobileMenu = ({
   );
 };
 
+// Mobile search overlay
 const MobileSearch = ({
   isOpen,
   onClose,
@@ -163,6 +168,7 @@ const MobileSearch = ({
   );
 };
 
+// Profile dropdown with user options
 const CustomProfileDropdown = () => {
   const { signOut, user } = useClerk();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -171,6 +177,7 @@ const CustomProfileDropdown = () => {
   });
   const getFileUrl = useMutation(api.files.getUrl);
 
+  // Fetch and set user avatar URL
   useEffect(() => {
     const fetchAvatarUrl = async () => {
       if (!userData || !user?.id) return;
@@ -200,9 +207,10 @@ const CustomProfileDropdown = () => {
     fetchAvatarUrl();
   }, [userData, user?.id, user?.imageUrl, getFileUrl]);
 
+  // Dropdown menu items configuration
   const dropdownItems = [
     {
-      href: `/profile/${userData?.andrewId}`,
+      href: `/profile`,
       icon: User,
       label: "View Profile",
       className:

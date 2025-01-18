@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Star,
   MessageCircle,
+  IdCardIcon,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -33,8 +34,10 @@ import {
 const DEFAULT_AVATAR = "/assets/default-avatar.png";
 
 export default function ItemPage() {
+  // Core state management
   const params = useParams<{ type: string; id: string }>();
   const { user } = useUser();
+  const userId = user?.id as Id<"users">;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUpArrow, setShowUpArrow] = useState(false);
   const [showDownArrow, setShowDownArrow] = useState(false);
@@ -44,15 +47,16 @@ export default function ItemPage() {
   const [newTransId, setNewTransId] = useState<Id<"transactions"> | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
-  if (
-    params.type !== ITEM_TYPE.COMMISSION &&
-    params.type !== ITEM_TYPE.MARKETPLACE
-  ) {
-    return null;
-  }
-
+  // Item type determination
   const isCommissionType = params.type === ITEM_TYPE.COMMISSION;
+  const isValidType =
+    params.type === ITEM_TYPE.COMMISSION ||
+    params.type === ITEM_TYPE.MARKETPLACE;
 
+  // Create favorite item ID with type prefix for storage
+  const favoriteItemId = `${params.type === ITEM_TYPE.COMMISSION ? "comm" : "mp"}_${params.id}`;
+
+  // Data fetching queries
   const commissionItem = useQuery(
     api.commItems.getById,
     isCommissionType ? { itemId: params.id as Id<"commItems"> } : "skip"
@@ -64,12 +68,14 @@ export default function ItemPage() {
   );
 
   const item = isCommissionType ? commissionItem : marketplaceItem;
+
   const seller = useQuery(api.users.getUserById, {
     id: item?.sellerId ?? ("skip" as Id<"users">),
   });
 
   const getFileUrl = useMutation(api.files.getUrl);
 
+  // Image handling
   const imageUrls =
     useQuery(api.files.getStorageUrls, {
       storageIds: item?.images ?? [],
@@ -79,21 +85,25 @@ export default function ItemPage() {
     (url): url is string => typeof url === "string" && url.trim() !== ""
   );
 
-  const updateArrows = () => {
-    const container = thumbnailContainerRef.current;
-    if (container) {
-      setShowUpArrow(container.scrollTop > 0);
-      setShowDownArrow(
-        container.scrollTop <
-          container.scrollHeight - container.clientHeight - 1
-      );
-    }
-  };
+  // Favorites functionality
+  const addToFavorites = useMutation(api.users.addFavorite);
+  const removeFromFavorites = useMutation(api.users.removeFavorite);
+  const isFavorited = useQuery(
+    api.users.isFavorited,
+    userId && item
+      ? {
+          userId,
+          itemId: favoriteItemId,
+        }
+      : "skip"
+  );
 
+  // Update scroll arrows when images change
   useEffect(() => {
     updateArrows();
   }, [validImages]);
 
+  // Setup scroll event listener
   useEffect(() => {
     const container = thumbnailContainerRef.current;
     if (container) {
@@ -102,6 +112,7 @@ export default function ItemPage() {
     }
   }, []);
 
+  // Fetch and set seller's avatar
   useEffect(() => {
     const fetchAvatarUrl = async () => {
       if (!seller?.avatarUrl || !seller?.clerkId) return;
@@ -125,8 +136,17 @@ export default function ItemPage() {
     fetchAvatarUrl();
   }, [seller?.avatarUrl, seller?.clerkId, getFileUrl]);
 
-  // Early return if data isn't loaded
-  if (!item || !seller || validImages.length === 0) return null;
+  // Thumbnail navigation helpers
+  const updateArrows = () => {
+    const container = thumbnailContainerRef.current;
+    if (container) {
+      setShowUpArrow(container.scrollTop > 0);
+      setShowDownArrow(
+        container.scrollTop <
+          container.scrollHeight - container.clientHeight - 1
+      );
+    }
+  };
 
   const handleThumbnailClick = (index: number) => {
     setCurrentIndex(index);
@@ -140,6 +160,7 @@ export default function ItemPage() {
     }
   };
 
+  // Main image navigation
   const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
     e.preventDefault();
     e.stopPropagation();
@@ -155,24 +176,43 @@ export default function ItemPage() {
     }
   };
 
-  const status = isCommissionItem(item) ? item.isAvailable : item.status;
-  const statusText = isCommissionItem(item)
-    ? item.isAvailable
-      ? "Available"
-      : "Unavailable"
-    : item.status.charAt(0).toUpperCase() + item.status.slice(1);
+  /// Handle favoriting/unfavoriting
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  const canPurchase =
-    status === MPITEM_STATUS.AVAILABLE ||
-    (isCommissionItem(item) && item.isAvailable);
+    if (!userId) {
+      // TODO: Show login prompt
+      return;
+    }
 
-  // Transaction mutations
+    try {
+      if (isFavorited) {
+        await removeFromFavorites({
+          userId,
+          itemId: favoriteItemId,
+        });
+      } else {
+        await addToFavorites({
+          userId,
+          itemId: favoriteItemId,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating favorites:", error);
+      // TODO: Show error toast
+    }
+  };
+
+  // Transaction handling
   const createTransaction = useMutation(api.transactions.create);
   const updateTransaction = useMutation(api.transactions.update);
 
   const handleTransaction = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !item || !seller) return;
+
     if (!isActive) {
+      // Create new transaction
       try {
         const id = await createTransaction({
           userId: user.id,
@@ -189,6 +229,7 @@ export default function ItemPage() {
         console.error("Error creating transaction: ", error);
       }
     } else {
+      // Cancel existing transaction
       if (newTransId === null) {
         console.error(
           "Attempted to unrequest a transaction that should not be active."
@@ -208,6 +249,27 @@ export default function ItemPage() {
     }
     setIsActive(!isActive);
   };
+
+  // Early returns for invalid states
+  if (!isValidType) {
+    return null;
+  }
+
+  if (!item || !seller || validImages.length === 0) {
+    return null;
+  }
+
+  // Determine item status and purchase availability
+  const status = isCommissionItem(item) ? item.isAvailable : item.status;
+  const statusText = isCommissionItem(item)
+    ? item.isAvailable
+      ? "Available"
+      : "Unavailable"
+    : item.status.charAt(0).toUpperCase() + item.status.slice(1);
+
+  const canPurchase =
+    status === MPITEM_STATUS.AVAILABLE ||
+    (isCommissionItem(item) && item.isAvailable);
 
   return (
     <div className="container mx-auto px-4 py-8 font-rubik max-w-7xl">
@@ -298,17 +360,25 @@ export default function ItemPage() {
                 </>
               )}
 
-              {/* Favorite button */}
-              <button
-                className={cn(
-                  "absolute top-4 right-4 p-2.5 rounded-full bg-white shadow-lg transition-all duration-200",
-                  "hover:bg-gray-100",
-                  isMainImageHovered ? "opacity-100" : "opacity-0"
-                )}
-              >
-                <Heart className="w-5 h-5 text-gray-700" />
-              </button>
-
+              {/* Favorite button - shown on hover */}
+              {isFavorited ? (
+                <button
+                  className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200"
+                  onClick={handleFavoriteClick}
+                >
+                  <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
+                </button>
+              ) : (
+                <button
+                  className={cn(
+                    "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
+                    isMainImageHovered ? "opacity-80" : "opacity-0"
+                  )}
+                  onClick={handleFavoriteClick}
+                >
+                  <Heart className={cn("w-5 h-5")} />
+                </button>
+              )}
               {/* Image navigation dots */}
               {validImages.length > 1 && (
                 <div
