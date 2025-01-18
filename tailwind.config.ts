@@ -11,6 +11,7 @@ export default {
     extend: {
       fontFamily: {
         rubik: ["var(--font-rubik)"],
+        caladea: ["var(--font-caladea)"],
       },
       colors: {
         background: "hsl(var(--background))",

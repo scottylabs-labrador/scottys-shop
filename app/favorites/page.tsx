@@ -24,8 +24,8 @@ export default function FavoritesPage() {
   if (favorites === undefined) return <Loading />;
 
   return (
-    <div className="container max-w-8xl mx-auto px-40 py-8">
-      <h1 className="text-2xl font-bold font-playfair mb-6 border-b-4 border-[#C41230] pb-2">
+    <div className="container max-w-8xl mx-auto px-[100px] py-6">
+      <h1 className="text-5xl font-caladea mb-6 border-b-4 border-[#C41230] pb-2">
         Favorites
       </h1>
 

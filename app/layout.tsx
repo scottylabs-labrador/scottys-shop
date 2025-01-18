@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Playfair_Display, Rubik } from "next/font/google";
+import { Caladea, Rubik } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -25,10 +25,11 @@ const rubik = Rubik({
   variable: "--font-rubik",
 });
 
-const playfair_display = Playfair_Display({
+const caladea = Caladea({
+  weight: ["400"],
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-playfair-display",
+  variable: "--font-caladea",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} antialiased relative`}
+        className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} ${caladea.variable} antialiased relative`}
       >
         <ConvexClientProvider>
           <ClerkProvider>
