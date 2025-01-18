@@ -14,6 +14,7 @@ export default defineSchema({
     shopTitle: v.optional(v.string()),
     shopDescription: v.optional(v.string()),
     favorites: v.array(v.string()),
+    cart: v.array(v.id("transactions")),
     createdAt: v.number(),
   })
     .index("by_email", ["email"])
@@ -71,6 +72,7 @@ export default defineSchema({
     ),
     itemId: v.union(v.id("commItems"), v.id("mpItems")),
     price: v.number(),
+    buyerNote: v.optional(v.string()),
     status: v.union(
       v.literal(TRANSACTION_STATUS.PENDING),
       v.literal(TRANSACTION_STATUS.COMPLETED),
