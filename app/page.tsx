@@ -21,13 +21,13 @@ export default function Home() {
   return (
     <div className="flex flex-col md:flex-row font-rubik">
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Welcome to Scotty's Shop!</h1>
+        <h1 className="text-5xl font-caladea mb-6">
+          Welcome to Scotty's Shop!
+        </h1>
         <div className="grid grid-cols-2 gap-4">
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
-              <div className="font-bold text-xl mb-2">
-                Featured Marketplace Item
-              </div>
+              <div className="text-xl mb-2">Featured Marketplace Item</div>
               {mpItem && mpItem.length > 0 ? (
                 <ItemCard
                   itemId={mpItem[randomMPIndex]._id}
@@ -43,7 +43,7 @@ export default function Home() {
 
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
-              <div className="font-bold text-xl mb-2">Featured Commission</div>
+              <div className="text-xl mb-2">Featured Commission</div>
               {commItem && commItem.length > 0 ? (
                 <ItemCard
                   itemId={commItem[randomCommIndex]._id}

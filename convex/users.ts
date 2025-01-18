@@ -51,6 +51,7 @@ export const upsertUser = mutation({
       andrewId,
       createdAt: Date.now(),
       favorites: [],
+      cart: [],
     });
 
     return userId;

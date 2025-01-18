@@ -331,21 +331,23 @@ const Header = () => {
         </div>
 
         {/* Center Search - Desktop */}
-        <div className="hidden lg:block flex-1 max-w-2xl">
+        <div className="hidden lg:block flex-1">
           <SearchBar />
         </div>
 
         {/* Right Side - Desktop Shows Icons */}
         <div className="flex items-center justify-end gap-4 flex-shrink-0">
           <SignedOut>
-            <SignInButton mode="modal">
-              <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-full group">
-                <MdOutlinePerson className="w-6 h-6" />
-                <span className="text-sm font-rubik font-medium group-hover:text-[#C41230] hidden lg:inline">
-                  Sign in
-                </span>
-              </button>
-            </SignInButton>
+            <div className="pl-[150px] ">
+              <SignInButton mode="modal">
+                <button className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-full group">
+                  <MdOutlinePerson className="w-6 h-6" />
+                  <span className="text-sm font-rubik font-medium group-hover:text-[#C41230] hidden lg:inline">
+                    Sign in
+                  </span>
+                </button>
+              </SignInButton>
+            </div>
           </SignedOut>
           <SignedIn>
             <div className="hidden lg:flex items-center gap-4">
