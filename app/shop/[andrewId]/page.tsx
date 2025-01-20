@@ -1,169 +1,308 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useParams } from "next/navigation";
+import React, { useState, useEffect, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ITEM_TYPE } from "@/convex/constants";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/Loading";
-import ItemCard from "@/components/ItemCard";
+import ImageUploadModal from "@/components/ImageUploadModal";
+import BannerSection from "@/components/shop/BannerSection";
+import ProfileSection from "@/components/shop/ProfileSection";
+import ContentSection from "@/components/shop/ContentSection";
+
+interface FormData {
+  name: string;
+  title: string;
+  description: string;
+}
 
 export default function ShopPage() {
-  // URL parameters
+  // Router and Authentication
   const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const andrewId = typeof params?.andrewId === "string" ? params.andrewId : "";
+  const { isSignedIn, user } = useUser();
 
-  // Queries
+  // Queries and Mutations
   const shopOwner = useQuery(api.users.getUserByAndrewId, { andrewId });
+  const userData = useQuery(api.users.getUserByClerkId, {
+    clerkId: user?.id || "",
+  });
   const shopItems = useQuery(api.users.getShopItems, {
     userId: shopOwner?._id ?? ("" as Id<"users">),
   });
-
-  // Mutations
   const getFileUrl = useMutation(api.files.getUrl);
+  const updateShop = useMutation(api.users.updateShopSettings);
+  const createMarketplaceItem = useMutation(api.mpItems.create);
+  const createCommissionItem = useMutation(api.commItems.create);
 
-  // State management
-  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
-  const [bannerUrl, setBannerUrl] = React.useState<string | null>(null);
+  // Local State
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadType, setUploadType] = useState<"avatar" | "banner" | null>(
+    null
+  );
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createItemType, setCreateItemType] = useState<
+    "marketplace" | "commission" | null
+  >(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [originalBannerUrl, setOriginalBannerUrl] = useState<string | null>(
+    null
+  );
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    title: "",
+    description: "",
+  });
 
-  // Effect for avatar URL
+  // Memoized Values
+  const defaultShopTitle = useMemo(() => {
+    if (!shopOwner?.name) return "";
+    return `Welcome to ${shopOwner.name.split(" ")[0]}'s Shop`;
+  }, [shopOwner?.name]);
+
+  const isOwnShop = useMemo(
+    () => Boolean(isSignedIn && userData?.andrewId === andrewId),
+    [isSignedIn, userData?.andrewId, andrewId]
+  );
+
+  // Effects
   useEffect(() => {
-    const fetchAvatarUrl = async () => {
-      if (shopOwner?.avatarUrl && shopOwner?.clerkId) {
-        try {
-          if (shopOwner.avatarUrl.startsWith("http")) {
-            setAvatarUrl(shopOwner.avatarUrl);
-          } else {
-            const url = await getFileUrl({
-              storageId: shopOwner.avatarUrl,
-              userId: shopOwner?.clerkId,
-            });
-            setAvatarUrl(url);
-          }
-        } catch (error) {
-          console.error("Error fetching avatar URL:", error);
+    const fetchUrls = async () => {
+      if (!shopOwner?.clerkId) return;
+
+      try {
+        // Fetch avatar URL
+        if (shopOwner.avatarUrl) {
+          const url = shopOwner.avatarUrl.startsWith("http")
+            ? shopOwner.avatarUrl
+            : await getFileUrl({
+                storageId: shopOwner.avatarUrl,
+                userId: shopOwner.clerkId,
+              });
+          setAvatarUrl(url);
         }
+
+        // Fetch banner URL
+        if (shopOwner.shopBanner) {
+          const url = shopOwner.shopBanner.startsWith("http")
+            ? shopOwner.shopBanner
+            : await getFileUrl({
+                storageId: shopOwner.shopBanner,
+                userId: shopOwner.clerkId,
+              });
+          setBannerUrl(url);
+          setOriginalBannerUrl(url);
+        }
+      } catch (error) {
+        console.error("Error fetching URLs:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load shop images",
+          variant: "destructive",
+        });
       }
     };
 
-    fetchAvatarUrl();
-  }, [shopOwner?.avatarUrl, shopOwner?.clerkId, getFileUrl]);
+    fetchUrls();
+  }, [shopOwner, getFileUrl, toast]);
 
-  // Effect for banner URL
   useEffect(() => {
-    const fetchBannerUrl = async () => {
-      if (shopOwner?.shopBanner && shopOwner?.clerkId) {
-        try {
-          if (shopOwner.shopBanner.startsWith("http")) {
-            setBannerUrl(shopOwner.shopBanner);
-          } else {
-            const url = await getFileUrl({
-              storageId: shopOwner.shopBanner,
-              userId: shopOwner.clerkId,
-            });
-            setBannerUrl(url);
-          }
-        } catch (error) {
-          console.error("Error fetching banner URL:", error);
-        }
+    if (shopOwner && !isEditing) {
+      // Only update if not in edit mode
+      setFormData({
+        name: shopOwner.name,
+        title: shopOwner.shopTitle || defaultShopTitle,
+        description: shopOwner.shopDescription || "",
+      });
+    }
+  }, [shopOwner, defaultShopTitle, isEditing]);
+
+  // Event Handlers
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (shopOwner) {
+      setFormData({
+        name: shopOwner.name,
+        title: shopOwner.shopTitle || defaultShopTitle,
+        description: shopOwner.shopDescription || "",
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isSignedIn || !isOwnShop || !user) return;
+
+    setIsSaving(true);
+    try {
+      await updateShop({
+        userId: user.id,
+        name: formData.name,
+        shopTitle: formData.title,
+        shopBanner: shopOwner?.shopBanner || "",
+        shopDescription: formData.description,
+      });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Shop settings updated successfully",
+      });
+    } catch (error) {
+      console.error("Error saving shop:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update shop settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (shopOwner) {
+      setFormData({
+        name: shopOwner.name,
+        title: shopOwner.shopTitle || defaultShopTitle,
+        description: shopOwner.shopDescription || "",
+      });
+    }
+    setBannerUrl(originalBannerUrl);
+    setIsEditing(false);
+  };
+
+  const handleFileUpload = async (storageId: string) => {
+    if (!isSignedIn || !isOwnShop || !user) return;
+
+    try {
+      await updateShop({
+        userId: user.id,
+        name: shopOwner?.name || "",
+        shopTitle: shopOwner?.shopTitle || defaultShopTitle,
+        shopBanner:
+          uploadType === "banner" ? storageId : shopOwner?.shopBanner || "",
+        shopDescription: shopOwner?.shopDescription || "",
+        avatarUrl: uploadType === "avatar" ? storageId : shopOwner?.avatarUrl,
+      });
+
+      const url = await getFileUrl({
+        storageId: storageId,
+        userId: user.id,
+      });
+
+      if (uploadType === "avatar") {
+        setAvatarUrl(url);
+      } else {
+        setBannerUrl(url);
+        setOriginalBannerUrl(url);
       }
-    };
 
-    fetchBannerUrl();
-  }, [shopOwner?.shopBanner, shopOwner?.clerkId, getFileUrl]);
+      toast({
+        title: "Success",
+        description: `${uploadType === "avatar" ? "Avatar" : "Banner"} updated successfully`,
+      });
+    } catch (error) {
+      console.error("Error updating file:", error);
+      toast({
+        title: "Error",
+        description: `Failed to update ${uploadType === "avatar" ? "avatar" : "banner"}`,
+        variant: "destructive",
+      });
+    }
+  };
 
-  // Loading check
-  if (!shopOwner || !shopItems) return <Loading />;
+  const handleResetBanner = async () => {
+    if (!isSignedIn || !isOwnShop || !user) return;
+
+    try {
+      await updateShop({
+        userId: user.id,
+        name: shopOwner?.name || "",
+        shopTitle: shopOwner?.shopTitle || defaultShopTitle,
+        shopBanner: "",
+        shopDescription: shopOwner?.shopDescription || "",
+      });
+
+      setBannerUrl(null);
+      setOriginalBannerUrl(null);
+      toast({
+        title: "Success",
+        description: "Banner removed successfully",
+      });
+    } catch (error) {
+      console.error("Error resetting banner:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove banner",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!shopOwner || !shopItems) {
+    return <Loading />;
+  }
 
   return (
-    <div className="bg-gray-50">
-      {/* Banner Section */}
-      <div className="relative h-64 bg-gray-200">
-        <div
-          className="h-full w-full bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${bannerUrl || "/assets/default-banner.png"})`,
-          }}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <form onSubmit={handleSave}>
+        <BannerSection
+          bannerUrl={bannerUrl}
+          isEditing={isEditing}
+          isOwnShop={isOwnShop}
+          setUploadType={setUploadType}
+          handleResetBanner={handleResetBanner}
         />
-      </div>
 
-      <div className="max-w-full mx-auto px-4">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Profile Section */}
-          <div className="w-full md:w-64 flex-shrink-0">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="w-32 h-32 mx-auto">
-                <Avatar className="w-full h-full">
-                  <AvatarImage
-                    src={avatarUrl || "/assets/default-avatar.png"}
-                  />
-                  <AvatarFallback>{shopOwner.name[0]}</AvatarFallback>
-                </Avatar>
-              </div>
-              <h2 className="text-xl font-bold text-center mt-4">
-                {shopOwner.andrewId}
-              </h2>
-            </div>
-          </div>
+        <ProfileSection
+          shopOwner={{
+            ...shopOwner,
+            shopTitle: shopOwner.shopTitle ?? null,
+            shopDescription: shopOwner.shopDescription ?? null,
+          }}
+          avatarUrl={avatarUrl}
+          defaultShopTitle={defaultShopTitle}
+          isOwnShop={isOwnShop}
+          isEditing={isEditing}
+          isSaving={isSaving}
+          formData={formData}
+          handleInputChange={handleInputChange}
+          setUploadType={setUploadType}
+          handleCancel={handleCancel}
+          handleEditClick={handleEditClick}
+        />
 
-          {/* Content Section */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm p-6">
-            <div className="mb-8">
-              <h3 className="text-2xl font-semibold mb-4">
-                {shopOwner.shopTitle ||
-                  `Welcome to ${shopOwner.name.split(" ")[0]}'s Shop`}
-              </h3>
+        <ContentSection shopItems={shopItems} isOwnShop={isOwnShop} />
 
-              {shopOwner.shopDescription && (
-                <p className="text-gray-600 text-md leading-relaxed">
-                  {shopOwner.shopDescription}
-                </p>
-              )}
-            </div>
-
-            {/* Commission Items */}
-            {shopItems.commissionItems.length > 0 && (
-              <div className="py-4">
-                <h3 className="text-xl font-bold mb-4">Active Commissions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {shopItems.commissionItems.map((item) => (
-                    <div key={item._id}>
-                      <ItemCard itemId={item._id} type={ITEM_TYPE.COMMISSION} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Marketplace Items */}
-            {shopItems.marketplaceItems.length > 0 && (
-              <div className="py-4">
-                <h3 className="text-xl font-bold mb-4">Marketplace Listings</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {shopItems.marketplaceItems.map((item) => (
-                    <div key={item._id}>
-                      <ItemCard
-                        itemId={item._id}
-                        type={ITEM_TYPE.MARKETPLACE}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* No Items Message */}
-            {shopItems.commissionItems.length === 0 &&
-              shopItems.marketplaceItems.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  No items in shop yet
-                </div>
-              )}
-          </div>
-        </div>
-      </div>
+        <ImageUploadModal
+          isOpen={uploadType !== null}
+          onClose={() => setUploadType(null)}
+          onUpload={handleFileUpload}
+          title={uploadType === "avatar" ? "Upload Avatar" : "Upload Banner"}
+          isOwnShop={isOwnShop}
+        />
+      </form>
     </div>
   );
 }

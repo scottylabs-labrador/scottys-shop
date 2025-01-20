@@ -16,7 +16,7 @@ import {
   Heart,
   ShoppingCart,
   Store,
-  User,
+  LayoutDashboardIcon,
   History,
   Settings,
   MessageCircle,
@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SearchBar from "./SearchBar";
 
 // Navigation items for header menu
-const NAVIGATION_ITEMS = ["Marketplace", "Commissions", "Requests"];
+const NAVIGATION_ITEMS = ["Commissions", "Marketplace", "Requests"];
 
 // Reusable navigation link component
 interface NavigationLinkProps {
@@ -210,8 +210,8 @@ const CustomProfileDropdown = () => {
   // Dropdown menu items configuration
   const dropdownItems = [
     {
-      href: `/profile`,
-      icon: User,
+      href: `/shop/${userData?.andrewId}`,
+      icon: Store,
       label: "View Profile",
       className:
         "p-4 font-rubik focus:bg-gray-100 cursor-pointer bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-[#C41230]",
@@ -370,7 +370,7 @@ const Header = () => {
                 title="My Shop"
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
-                <Store className="w-6 h-6 hover:text-[#C41230]" />
+                <LayoutDashboardIcon className="w-6 h-6 hover:text-[#C41230]" />
               </Link>
               <CustomProfileDropdown />
               <Link
