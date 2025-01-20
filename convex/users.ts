@@ -69,6 +69,108 @@ export const getUserByAndrewId = query({
   },
 });
 
+// Add transaction to cart
+export const addCart = mutation({
+  args: {
+    userId: v.string(),
+    transactionId: v.id("transactions"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.cart.includes(args.transactionId)) {
+      await ctx.db.patch(user._id, {
+        cart: [...user.cart, args.transactionId],
+      });
+    }
+
+    return user;
+  },
+});
+
+// Remove transaction from cart
+export const removeCart = mutation({
+  args: {
+    userId: v.string(),
+    transactionId: v.id("transactions"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      cart: user.cart.filter((id) => id !== args.transactionId),
+    });
+
+    return user;
+  },
+});
+
+// Check if transaction is in cart
+export const isInCart = query({
+  args: {
+    userId: v.string(),
+    transactionId: v.id("transactions"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user) {
+      return false;
+    }
+
+    return user.cart.includes(args.transactionId);
+  },
+});
+
+// Get user cart
+export const getUserCart = query({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get user by Clerk ID
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.userId))
+      .first();
+
+    if (!user || user.cart.length === 0) {
+      return [];
+    }
+
+    const transactionItems = await Promise.all(
+      user.cart.map(async (id) => {
+        const transaction = await ctx.db.get(id as Id<"transactions">);
+        return transaction
+          ? [transaction.itemId, transaction.itemType]   
+          : null;
+      })
+    ); 
+
+    return transactionItems;  
+    // Returns array of tuples (itemId, itemType) for each transaction in cart
+     
+  }
+});
+
+
 // Add item to favorites
 export const addFavorite = mutation({
   args: {
