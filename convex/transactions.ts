@@ -15,6 +15,27 @@ export const getById = query({
   },
 });
 
+// Get active transaction(s) for the buyer if it exists, possible filter by item
+export const getActiveTransaction = query({
+  args:{
+    buyerId: v.id("users"),
+    itemId: v.optional(v.union(
+      v.id("mpItems"),
+      v.id("commItems")
+    )), 
+  },
+  handler: async (ctx, args) => {
+    const trans = await ctx.db.query("transactions")
+    .order("desc")
+    .filter((q) => 
+      q.and(q.and(q.eq(q.field("buyerId"), args.buyerId), q.eq(q.field("itemId"), args.itemId)), 
+      q.eq(q.field("status"), TRANSACTION_STATUS.PENDING))
+    )
+    .collect();
+    return trans;
+  },
+});
+
 // Search transactions with optional filters
 export const search = query({
   args: {

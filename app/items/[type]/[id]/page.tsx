@@ -43,9 +43,10 @@ export default function ItemPage() {
   const [showDownArrow, setShowDownArrow] = useState(false);
   const [isMainImageHovered, setIsMainImageHovered] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isActive, setIsActive] = useState(false);
   const [newTransId, setNewTransId] = useState<Id<"transactions"> | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+
+  
 
   // Item type determination
   const isCommissionType = params.type === ITEM_TYPE.COMMISSION;
@@ -68,6 +69,13 @@ export default function ItemPage() {
   );
 
   const item = isCommissionType ? commissionItem : marketplaceItem;
+
+  // attempt at keeping track of active transaction
+  const getActive = useQuery(api.transactions.getActiveTransaction,{
+    buyerId: userId,
+    itemId: item?._id,
+  });
+  const [isActive, setIsActive] = useState(getActive ? true : false);
 
   const seller = useQuery(api.users.getUserById, {
     id: item?.sellerId ?? ("skip" as Id<"users">),
