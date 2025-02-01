@@ -98,6 +98,11 @@ export default function ItemPage() {
       : "skip"
   );
 
+  // Cart functionality
+  const addToCart = useMutation(api.users.addCart);
+  const removeFromCart = useMutation(api.users.removeCart);
+  
+
   // Update scroll arrows when images change
   useEffect(() => {
     updateArrows();
@@ -211,7 +216,7 @@ export default function ItemPage() {
   const handleTransaction = async () => {
     if (!user?.id || !item || !seller) return;
 
-    if (!isActive) {
+    if (!isActive) {   // !! need to change this boolean to be an actual query check !!
       // Create new transaction
       try {
         const id = await createTransaction({
@@ -223,6 +228,12 @@ export default function ItemPage() {
           itemId: item._id,
           price: item.price,
         });
+
+        await addToCart({
+          userId,
+          transactionId: id
+        });
+
         setNewTransId(id);
         console.log("Created transaction with ID: ", id);
       } catch (error) {
@@ -241,6 +252,12 @@ export default function ItemPage() {
             transactionId: newTransId,
             status: TRANSACTION_STATUS.CANCELLED,
           });
+
+          await removeFromCart({
+            userId,
+            transactionId: newTransId
+          });
+
           setNewTransId(null);
         } catch (error) {
           console.error("Error updating transaction status:", error);
