@@ -52,14 +52,16 @@ export default function MarketplacePage() {
   if (!items) return <Loading />;
 
   return (
-    <div className="flex flex-col md:flex-row">
-      <ItemFilter
-        onFilterChange={handleFilterChange}
-        isMarketplace
-        initialFilters={filters}
-      />
-      <div className="flex-1 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ">
+    <div className="flex flex-col max-w-7xl mx-auto px-4 py-6">
+      <div className="pl-5">
+        <ItemFilter
+          onFilterChange={handleFilterChange}
+          isMarketplace
+          initialFilters={filters}
+        />
+      </div>
+      <div className="flex-1 pl-9">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {items.map((item) => (
             <ItemCard
               key={item._id}

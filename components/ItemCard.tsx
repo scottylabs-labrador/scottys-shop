@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import {
   ITEM_TYPE,
   type ItemType,
@@ -92,7 +92,6 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
     e.stopPropagation();
 
     if (!userId) {
-      // TODO: Show login prompt
       return;
     }
 
@@ -116,7 +115,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
 
   return (
     <div
-      className="group font-rubik shadow-sm relative w-full max-w-[275px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+      className="group font-rubik shadow-sm relative w-full max-w-[300px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -151,24 +150,39 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
           )}
 
           {/* Favorite button - shown on hover */}
-          {isFavorited ? (
-            <button
-              className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200"
-              onClick={handleFavoriteClick}
-            >
-              <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
-            </button>
-          ) : (
-            <button
-              className={cn(
-                "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
-                isHovered ? "opacity-80" : "opacity-0"
-              )}
-              onClick={handleFavoriteClick}
-            >
-              <Heart className={cn("w-5 h-5")} />
-            </button>
-          )}
+          <SignedIn>
+            {isFavorited ? (
+              <button
+                className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200"
+                onClick={handleFavoriteClick}
+              >
+                <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
+              </button>
+            ) : (
+              <button
+                className={cn(
+                  "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
+                  isHovered ? "opacity-80" : "opacity-0"
+                )}
+                onClick={handleFavoriteClick}
+              >
+                <Heart className={cn("w-5 h-5")} />
+              </button>
+            )}
+          </SignedIn>
+          <SignedOut>
+            <SignInButton>
+              <button
+                className={cn(
+                  "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
+                  isHovered ? "opacity-80" : "opacity-0"
+                )}
+                onClick={handleFavoriteClick}
+              >
+                <Heart className={cn("w-5 h-5")} />
+              </button>
+            </SignInButton>
+          </SignedOut>
 
           {/* Image pagination dots */}
           {validImages.length > 1 && (

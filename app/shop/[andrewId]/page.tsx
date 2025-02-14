@@ -6,7 +6,6 @@ import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/Loading";
 import ImageUploadModal from "@/components/ImageUploadModal";
@@ -23,7 +22,6 @@ interface FormData {
 export default function ShopPage() {
   // Router and Authentication
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   const andrewId = typeof params?.andrewId === "string" ? params.andrewId : "";
   const { isSignedIn, user } = useUser();
@@ -38,8 +36,6 @@ export default function ShopPage() {
   });
   const getFileUrl = useMutation(api.files.getUrl);
   const updateShop = useMutation(api.users.updateShopSettings);
-  const createMarketplaceItem = useMutation(api.mpItems.create);
-  const createCommissionItem = useMutation(api.commItems.create);
 
   // Local State
   const [isEditing, setIsEditing] = useState(false);
@@ -47,10 +43,7 @@ export default function ShopPage() {
   const [uploadType, setUploadType] = useState<"avatar" | "banner" | null>(
     null
   );
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createItemType, setCreateItemType] = useState<
-    "marketplace" | "commission" | null
-  >(null);
+
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [originalBannerUrl, setOriginalBannerUrl] = useState<string | null>(

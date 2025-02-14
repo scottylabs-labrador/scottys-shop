@@ -36,7 +36,7 @@ const DEFAULT_AVATAR = "/assets/default-avatar.png";
 export default function ItemPage() {
   // Core state management
   const params = useParams<{ type: string; id: string }>();
-  const { user } = useUser();
+  const { isSignedIn, user } = useUser();
   const userId = user?.id as Id<"users">;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUpArrow, setShowUpArrow] = useState(false);
@@ -45,8 +45,6 @@ export default function ItemPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [newTransId, setNewTransId] = useState<Id<"transactions"> | null>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
-
-  
 
   // Item type determination
   const isCommissionType = params.type === ITEM_TYPE.COMMISSION;
@@ -70,11 +68,16 @@ export default function ItemPage() {
 
   const item = isCommissionType ? commissionItem : marketplaceItem;
 
-  // attempt at keeping track of active transaction
-  const getActive = useQuery(api.transactions.getActiveTransaction,{
-    buyerId: userId,
-    itemId: item?._id,
-  });
+  // Attempt at keeping track of active transaction
+  const getActive = useQuery(
+    api.transactions.getActiveTransaction,
+    isSignedIn
+      ? {
+          buyerId: userId,
+          itemId: params.id as Id<"mpItems"> | Id<"commItems">,
+        }
+      : "skip"
+  );
   const [isActive, setIsActive] = useState(getActive ? true : false);
 
   const seller = useQuery(api.users.getUserById, {
@@ -109,7 +112,6 @@ export default function ItemPage() {
   // Cart functionality
   const addToCart = useMutation(api.users.addCart);
   const removeFromCart = useMutation(api.users.removeCart);
-  
 
   // Update scroll arrows when images change
   useEffect(() => {
@@ -195,7 +197,6 @@ export default function ItemPage() {
     e.stopPropagation();
 
     if (!userId) {
-      // TODO: Show login prompt
       return;
     }
 
@@ -224,7 +225,8 @@ export default function ItemPage() {
   const handleTransaction = async () => {
     if (!user?.id || !item || !seller) return;
 
-    if (!isActive) {   // !! need to change this boolean to be an actual query check !!
+    if (!isActive) {
+      // !! need to change this boolean to be an actual query check !!
       // Create new transaction
       try {
         const id = await createTransaction({
@@ -239,7 +241,7 @@ export default function ItemPage() {
 
         await addToCart({
           userId,
-          transactionId: id
+          transactionId: id,
         });
 
         setNewTransId(id);
@@ -263,7 +265,7 @@ export default function ItemPage() {
 
           await removeFromCart({
             userId,
-            transactionId: newTransId
+            transactionId: newTransId,
           });
 
           setNewTransId(null);

@@ -4,7 +4,6 @@ import { TRANSACTION_STATUS, ITEM_TYPE } from "./constants";
 
 //should transactions also affect MPITEM_STATUS?
 
-
 // Get transaction by ID
 export const getById = query({
   args: { transactionId: v.id("transactions") },
@@ -17,21 +16,24 @@ export const getById = query({
 
 // Get active transaction(s) for the buyer if it exists, possible filter by item
 export const getActiveTransaction = query({
-  args:{
-    buyerId: v.id("users"),
-    itemId: v.optional(v.union(
-      v.id("mpItems"),
-      v.id("commItems")
-    )), 
+  args: {
+    buyerId: v.string(),
+    itemId: v.union(v.id("mpItems"), v.id("commItems")),
   },
   handler: async (ctx, args) => {
-    const trans = await ctx.db.query("transactions")
-    .order("desc")
-    .filter((q) => 
-      q.and(q.and(q.eq(q.field("buyerId"), args.buyerId), q.eq(q.field("itemId"), args.itemId)), 
-      q.eq(q.field("status"), TRANSACTION_STATUS.PENDING))
-    )
-    .collect();
+    const trans = await ctx.db
+      .query("transactions")
+      .order("desc")
+      .filter((q) =>
+        q.and(
+          q.and(
+            q.eq(q.field("buyerId"), args.buyerId),
+            q.eq(q.field("itemId"), args.itemId)
+          ),
+          q.eq(q.field("status"), TRANSACTION_STATUS.PENDING)
+        )
+      )
+      .collect();
     return trans;
   },
 });
@@ -49,10 +51,8 @@ export const search = query({
     ),
     buyerId: v.optional(v.id("users")),
     sellerId: v.optional(v.id("users")),
-    itemType: v.optional(v.union(
-        v.literal(ITEM_TYPE.COMMISSION),
-        v.literal(ITEM_TYPE.MARKETPLACE)
-      )
+    itemType: v.optional(
+      v.union(v.literal(ITEM_TYPE.COMMISSION), v.literal(ITEM_TYPE.MARKETPLACE))
     ),
   },
   handler: async (ctx, args) => {
@@ -71,7 +71,7 @@ export const search = query({
     const items = await query.collect();
 
     return items.filter((item) => {
-      if(args.itemType !== undefined && item.itemType !== args.itemType)
+      if (args.itemType !== undefined && item.itemType !== args.itemType)
         return false;
       return true;
     });
@@ -81,11 +81,11 @@ export const search = query({
 // Create new transactionn
 export const create = mutation({
   args: {
-    userId: v.string(),  // Clerk user ID 
+    userId: v.string(), // Clerk user ID
     sellerId: v.id("users"),
     itemType: v.union(
-        v.literal(ITEM_TYPE.COMMISSION),
-        v.literal(ITEM_TYPE.MARKETPLACE)
+      v.literal(ITEM_TYPE.COMMISSION),
+      v.literal(ITEM_TYPE.MARKETPLACE)
     ),
     itemId: v.union(v.id("commItems"), v.id("mpItems")),
     price: v.number(),
@@ -105,12 +105,12 @@ export const create = mutation({
 
     // User cannot buy their own item/commission
     if (sellerId === user._id) {
-        throw new Error("Cannot purchase your own item/commision");
+      throw new Error("Cannot purchase your own item/commision");
     }
 
     const transactionId = await ctx.db.insert("transactions", {
       ...transactionData,
-      buyerId: user._id,           // user who calls the mutation should become the buyer
+      buyerId: user._id, // user who calls the mutation should become the buyer
       sellerId: sellerId,
       status: TRANSACTION_STATUS.PENDING,
       createdAt: Date.now(),
@@ -155,7 +155,7 @@ export const update = mutation({
       throw new Error("Unauthorized");
     }
 
-    await ctx.db.patch(transactionId, {status});
+    await ctx.db.patch(transactionId, { status });
     return transactionId;
   },
 });

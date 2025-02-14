@@ -135,23 +135,13 @@ export default function ContentSection({
         </div>
 
         <div className="rounded-b-xl border-2 shadow-lg border-gray-200 bg-white px-6">
-          <div className="flex gap-10">
-            <aside className="w-64 flex-none">
-              <div className="rounded-lg bg-white">
-                <ItemFilter
-                  onFilterChange={handleFilterChange}
-                  isMarketplace={activeTab === "marketplace"}
-                  initialFilters={filters}
-                />
-              </div>
-            </aside>
-
+          <div className="flex gap-2">
             <div className="flex-1 py-6">
               <TabsContent
                 value="marketplace"
                 className="mt-0 focus-visible:outline-none"
               >
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
                   {marketplaceItems.length > 0 ? (
                     filterItems(marketplaceItems, true).map((item) => (
                       <ItemCard
@@ -170,7 +160,7 @@ export default function ContentSection({
                 value="commission"
                 className="mt-0 focus-visible:outline-none"
               >
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
                   {commissionItems.length > 0 ? (
                     filterItems(commissionItems, false).map((item) => (
                       <ItemCard

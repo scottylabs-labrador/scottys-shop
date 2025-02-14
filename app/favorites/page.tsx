@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { SignIn, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -16,6 +16,14 @@ export default function FavoritesPage() {
     api.users.getUserFavorites,
     userId ? { userId } : "skip"
   );
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-[80vh]">
+        <SignIn />
+      </div>
+    );
+  }
 
   // Show loading state while user auth is being checked
   if (!isLoaded) return <Loading />;

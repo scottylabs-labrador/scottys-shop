@@ -51,6 +51,12 @@ export function ItemFilter({
     initialFilters.minPrice || 0,
     initialFilters.maxPrice || 1000,
   ]);
+  const [minPriceInput, setMinPriceInput] = useState(
+    initialFilters.minPrice?.toString() || ""
+  );
+  const [maxPriceInput, setMaxPriceInput] = useState(
+    initialFilters.maxPrice?.toString() || ""
+  );
   const [category, setCategory] = useState<string | undefined>(
     initialFilters.category
   );
@@ -108,18 +114,30 @@ export function ItemFilter({
   }, []);
 
   const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 0;
-    const newPriceRange = [value, priceRange[1]];
-    if (value >= 0 && value <= priceRange[1]) {
-      setPriceRange(newPriceRange);
+    const inputValue = e.target.value;
+    setMinPriceInput(inputValue);
+
+    if (inputValue === "") {
+      setPriceRange([0, priceRange[1]]);
+    } else {
+      const value = parseInt(inputValue);
+      if (!isNaN(value) && value >= 0 && value <= priceRange[1]) {
+        setPriceRange([value, priceRange[1]]);
+      }
     }
   };
 
   const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 0;
-    const newPriceRange = [priceRange[0], value];
-    if (value >= priceRange[0] && value <= 1000) {
-      setPriceRange(newPriceRange);
+    const inputValue = e.target.value;
+    setMaxPriceInput(inputValue);
+
+    if (inputValue === "") {
+      setPriceRange([priceRange[0], 1000]);
+    } else {
+      const value = parseInt(inputValue);
+      if (!isNaN(value) && value >= priceRange[0] && value <= 1000) {
+        setPriceRange([priceRange[0], value]);
+      }
     }
   };
 
@@ -127,8 +145,7 @@ export function ItemFilter({
     const [minPrice, maxPrice] = priceRange;
     const newFilters: ActiveFilter[] = [];
 
-    // Only add price filter if it's different from default range
-    if (minPrice > 0 || maxPrice < 1000) {
+    if (minPriceInput || maxPriceInput) {
       newFilters.push({
         type: "price",
         value: `${minPrice}-${maxPrice}`,
@@ -175,6 +192,8 @@ export function ItemFilter({
     switch (filterToRemove.type) {
       case "price":
         setPriceRange([0, 1000]);
+        setMinPriceInput("");
+        setMaxPriceInput("");
         break;
       case "category":
         setCategory(undefined);
@@ -218,6 +237,8 @@ export function ItemFilter({
 
   const resetFilters = () => {
     setPriceRange([0, 1000]);
+    setMinPriceInput("");
+    setMaxPriceInput("");
     setCategory(undefined);
     setCondition(undefined);
     setMaxTurnaroundDays(30);
@@ -256,24 +277,24 @@ export function ItemFilter({
           <div className="flex-1">
             <Input
               type="number"
-              value={priceRange[0]}
+              value={minPriceInput}
               onChange={handleMinPriceChange}
               min={0}
-              max={priceRange[1]}
-              className="w-full font-rubik"
-              placeholder="Min price"
+              max={parseInt(maxPriceInput) || 1000}
+              className="w-full font-rubik focus-visible:ring-1"
+              placeholder="MIN"
             />
           </div>
           <span className="text-muted-foreground font-rubik">to</span>
           <div className="flex-1">
             <Input
               type="number"
-              value={priceRange[1]}
+              value={maxPriceInput}
               onChange={handleMaxPriceChange}
-              min={priceRange[0]}
+              min={parseInt(minPriceInput) || 0}
               max={1000}
-              className="w-full font-rubik"
-              placeholder="Max price"
+              className="w-full font-rubik focus-visible:ring-1"
+              placeholder="MAX"
             />
           </div>
         </div>
@@ -372,40 +393,26 @@ export function ItemFilter({
   );
 
   return (
-    <>
-      {/* Desktop View */}
-      <div className="hidden md:block w-[250px] p-6 border-r min-h-[calc(100vh-4rem)] sticky top-[8rem]">
-        {filterTabs}
-        <div className={activeFilters.length > 0 ? "mt-6" : ""}>
+    <div className="p-4">
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full md:w-auto rounded-full font-rubik"
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left">
+          <SheetHeader>
+            <SheetTitle></SheetTitle>
+            <SheetClose />
+          </SheetHeader>
+          {filterTabs}
           {filterContent}
-        </div>
-      </div>
-
-      {/* Mobile View */}
-      <div className="md:hidden w-full p-4 sticky top-[8rem] bg-background z-10">
-        {filterTabs}
-        <div className={activeFilters.length > 0 ? "mt-4" : ""}>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full cursor-pointer font-rubik"
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filters
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle className="font-rubik font-medium">
-                  Filters
-                </SheetTitle>
-              </SheetHeader>
-              {filterContent}
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-    </>
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }
