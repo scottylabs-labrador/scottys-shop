@@ -1,10 +1,9 @@
 "use client";
 import React from "react";
 import { useUser, SignIn } from "@clerk/nextjs";
-import { Sign } from "crypto";
 
-export default function itemDashboard() {
-  const { user, isSignedIn } = useUser();
+export default function ItemDashboard() {
+  const { user } = useUser();
 
   if (!user) {
     return (

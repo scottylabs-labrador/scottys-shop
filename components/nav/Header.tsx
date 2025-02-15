@@ -5,8 +5,6 @@ import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { FaBars } from "react-icons/fa";
 import { MdOutlinePerson } from "react-icons/md";
 import {
@@ -28,7 +26,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import SearchBar from "./SearchBar";
+import SearchBar from "@/components/nav/SearchBar";
+import { getUserByClerkId,
+  type UserWithId
+ } from "@/firebase/users";
 
 // Navigation items for header menu
 const NAVIGATION_ITEMS = ["Commissions", "Marketplace", "Requests"];
@@ -172,45 +173,34 @@ const MobileSearch = ({
 const CustomProfileDropdown = () => {
   const { signOut, user } = useClerk();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const userData = useQuery(api.users.getUserByClerkId, {
-    clerkId: user?.id || "",
-  });
-  const getFileUrl = useMutation(api.files.getUrl);
+  const [userData, setUserData] = useState<UserWithId | null>(null);
 
-  // Fetch and set user avatar URL
+  // Fetch user data from Firebase
   useEffect(() => {
-    const fetchAvatarUrl = async () => {
-      if (!userData || !user?.id) return;
+    const fetchUserData = async () => {
+      if (!user?.id) return;
 
       try {
-        if (userData.avatarUrl) {
-          if (userData.avatarUrl.startsWith("http")) {
-            setAvatarUrl(userData.avatarUrl);
-          } else {
-            const url = await getFileUrl({
-              storageId: userData.avatarUrl,
-              userId: user.id,
-            });
-            setAvatarUrl(url);
-          }
-        } else if (user.imageUrl) {
-          setAvatarUrl(user.imageUrl);
+        const fbUser = await getUserByClerkId(user.id);
+        if (fbUser) {
+          setUserData(fbUser);
+          setAvatarUrl(fbUser.avatarUrl || user.imageUrl || null);
+        } else {
+          setAvatarUrl(user.imageUrl || null);
         }
       } catch (error) {
-        console.error("Error fetching avatar URL:", error);
-        if (user.imageUrl) {
-          setAvatarUrl(user.imageUrl);
-        }
+        console.error("Error fetching user data:", error);
+        setAvatarUrl(user.imageUrl || null);
       }
     };
 
-    fetchAvatarUrl();
-  }, [userData, user?.id, user?.imageUrl, getFileUrl]);
+    fetchUserData();
+  }, [user?.id, user?.imageUrl]);
 
   // Dropdown menu items configuration
   const dropdownItems = [
     {
-      href: `/shop/${userData?.andrewId}`,
+      href: `/shop/${userData?.andrewId || ''}`,
       icon: Store,
       label: "View Profile",
       className:

@@ -1,24 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
-import {
-  ITEM_TYPE,
-  type ItemType,
-  type AnyItem,
-  isCommissionItem,
-} from "@/convex/constants";
+import { useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
+import { getUserByClerkId, addToFavorites, removeFromFavorites } from '@/firebase/users';
+import { getMPItemById } from '@/firebase/mpItems';
+import { getCommItemById } from '@/firebase/commItems';
 
-// Define component props
+// Define interfaces based on Firebase data models
+interface BaseItem {
+  id: string;
+  title: string;
+  price: number;
+  images: string[];
+}
+
+interface MPItem extends BaseItem {
+  condition: string;
+  status: typeof MPITEM_STATUS[keyof typeof MPITEM_STATUS];
+}
+
+interface CommItem extends BaseItem {
+  turnaroundDays: number;
+  isAvailable: boolean;
+}
+
+type ItemType = typeof ITEM_TYPE[keyof typeof ITEM_TYPE];
+
 interface ItemCardProps {
-  itemId: Id<"commItems"> | Id<"mpItems">;
+  itemId: string;
   type: ItemType;
 }
 
@@ -26,47 +41,46 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
   // State for image carousel and hover effects
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [item, setItem] = useState<MPItem | CommItem | null>(null);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Auth and user state
   const { user } = useUser();
-  const userId = user?.id as Id<"users">;
 
   // Create favorite item ID with type prefix
   const favoriteItemId = `${type === ITEM_TYPE.COMMISSION ? "comm" : "mp"}_${itemId}`;
 
-  // Mutations and queries
-  const addToFavorites = useMutation(api.users.addFavorite);
-  const removeFromFavorites = useMutation(api.users.removeFavorite);
-
-  // Check if item is favorited
-  const isFavorited = useQuery(
-    api.users.isFavorited,
-    userId
-      ? {
-          userId,
-          itemId: favoriteItemId,
+  // Fetch user data and check if item is favorited
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (user?.id) {
+        const userData = await getUserByClerkId(user.id);
+        if (userData) {
+          setUserId(userData.id);
+          setIsFavorited(userData.favorites?.includes(favoriteItemId) || false);
         }
-      : "skip"
-  );
+      }
+    };
+    fetchUser();
+  }, [user?.id, favoriteItemId]);
 
-  // Fetch item data based on type
-  const item = useQuery(
-    type === ITEM_TYPE.COMMISSION ? api.commItems.getById : api.mpItems.getById,
-    { itemId: itemId as any }
-  );
+  // Fetch item data
+  useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        const fetchedItem = type === ITEM_TYPE.COMMISSION
+          ? await getCommItemById(itemId)
+          : await getMPItemById(itemId);
+        setItem(fetchedItem);
+      } catch (error) {
+        console.error('Error fetching item:', error);
+      }
+    };
+    fetchItem();
+  }, [itemId, type]);
 
-  // Get image URLs from storage
-  const imageUrls =
-    useQuery(api.files.getStorageUrls, {
-      storageIds: item?.images ?? [],
-    }) ?? [];
-
-  // Filter out invalid image URLs
-  const validImages = imageUrls.filter(
-    (url): url is string => typeof url === "string" && url.trim() !== ""
-  );
-
-  if (!item || validImages.length === 0) {
+  if (!item || item.images.length === 0) {
     return null;
   }
 
@@ -77,11 +91,11 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
 
     if (direction === "prev") {
       setCurrentIndex((current) =>
-        current === 0 ? validImages.length - 1 : current - 1
+        current === 0 ? item.images.length - 1 : current - 1
       );
     } else {
       setCurrentIndex((current) =>
-        current === validImages.length - 1 ? 0 : current + 1
+        current === item.images.length - 1 ? 0 : current + 1
       );
     }
   };
@@ -97,20 +111,20 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
 
     try {
       if (isFavorited) {
-        await removeFromFavorites({
-          userId,
-          itemId: favoriteItemId,
-        });
+        await removeFromFavorites(userId, favoriteItemId);
+        setIsFavorited(false);
       } else {
-        await addToFavorites({
-          userId,
-          itemId: favoriteItemId,
-        });
+        await addToFavorites(userId, favoriteItemId);
+        setIsFavorited(true);
       }
     } catch (error) {
       console.error("Error updating favorites:", error);
       // TODO: Show error toast
     }
+  };
+
+  const isCommissionItem = (item: MPItem | CommItem): item is CommItem => {
+    return 'turnaroundDays' in item;
   };
 
   return (
@@ -119,12 +133,11 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/items/${type}/${itemId}`}>
+      <Link href={`/items/${type.toLowerCase()}/${itemId}`}>
         {/* Image container */}
         <div className="relative w-full aspect-square">
           <Image
-            loader={({ src }) => src}
-            src={validImages[currentIndex] || ""}
+            src={item.images[currentIndex] || ""}
             alt={`${item.title} ${currentIndex + 1}`}
             fill
             className="object-cover"
@@ -132,7 +145,7 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
           />
 
           {/* Navigation arrows - shown on hover */}
-          {validImages.length > 1 && isHovered && (
+          {item.images.length > 1 && isHovered && (
             <>
               <button
                 className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center transition-opacity duration-200"
@@ -151,24 +164,15 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
 
           {/* Favorite button - shown on hover */}
           <SignedIn>
-            {isFavorited ? (
-              <button
-                className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200"
-                onClick={handleFavoriteClick}
-              >
-                <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
-              </button>
-            ) : (
-              <button
-                className={cn(
-                  "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
-                  isHovered ? "opacity-80" : "opacity-0"
-                )}
-                onClick={handleFavoriteClick}
-              >
-                <Heart className={cn("w-5 h-5")} />
-              </button>
-            )}
+            <button
+              className={cn(
+                "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
+                isFavorited ? "opacity-100" : isHovered ? "opacity-80" : "opacity-0"
+              )}
+              onClick={handleFavoriteClick}
+            >
+              <Heart className={cn("w-5 h-5", isFavorited && "fill-rose-500 text-rose-500")} />
+            </button>
           </SignedIn>
           <SignedOut>
             <SignInButton>
@@ -177,22 +181,21 @@ export default function ItemCard({ itemId, type }: ItemCardProps) {
                   "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
                   isHovered ? "opacity-80" : "opacity-0"
                 )}
-                onClick={handleFavoriteClick}
               >
-                <Heart className={cn("w-5 h-5")} />
+                <Heart className="w-5 h-5" />
               </button>
             </SignInButton>
           </SignedOut>
 
           {/* Image pagination dots */}
-          {validImages.length > 1 && (
+          {item.images.length > 1 && (
             <div
               className={cn(
                 "absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 transition-opacity duration-200",
                 isHovered ? "opacity-100" : "opacity-0"
               )}
             >
-              {validImages.map((_, index) => (
+              {item.images.map((_, index) => (
                 <button
                   key={index}
                   className={cn(

@@ -1,21 +1,72 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { SignIn, useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { ITEM_TYPE } from "@/convex/constants";
-import ItemCard from "@/components/ItemCard";
-import Loading from "@/components/Loading";
+import { ITEM_TYPE } from '@/utils/constants';
+import ItemCard from "@/components/items/ItemCard";
+import Loading from "@/components/utils/Loading";
+import { getUserByClerkId } from '@/firebase/users';
+import { getCommItemById } from '@/firebase/commItems';
+import { getMPItemById } from '@/firebase/mpItems';
+
+interface FavoriteItem {
+  id: string;
+  type: typeof ITEM_TYPE[keyof typeof ITEM_TYPE];
+}
 
 export default function FavoritesPage() {
   const { user, isLoaded } = useUser();
-  const userId = user?.id;
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const favorites = useQuery(
-    api.users.getUserFavorites,
-    userId ? { userId } : "skip"
-  );
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Get user data from Firebase
+        const userData = await getUserByClerkId(user.id);
+        if (!userData) return;
+
+        // Process favorite IDs
+        const favoritePromises = userData.favorites.map(async (favoriteId) => {
+          // Favorite IDs are stored with prefix: 'comm_' or 'mp_'
+          const [type, id] = favoriteId.split('_');
+          
+          try {
+            // Verify item exists
+            const item = type === 'comm' 
+              ? await getCommItemById(id)
+              : await getMPItemById(id);
+
+            if (item) {
+              return {
+                id,
+                type: type === 'comm' ? ITEM_TYPE.COMMISSION : ITEM_TYPE.MARKETPLACE
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching item ${favoriteId}:`, error);
+          }
+          return null;
+        });
+
+        // Wait for all promises to resolve and filter out null values
+        const resolvedFavorites = (await Promise.all(favoritePromises))
+          .filter((item): item is FavoriteItem => item !== null);
+
+        setFavorites(resolvedFavorites);
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchFavorites();
+    }
+  }, [user?.id, isLoaded]);
 
   if (!user) {
     return (
@@ -26,10 +77,7 @@ export default function FavoritesPage() {
   }
 
   // Show loading state while user auth is being checked
-  if (!isLoaded) return <Loading />;
-
-  // Show loading state while favorites are being fetched
-  if (favorites === undefined) return <Loading />;
+  if (!isLoaded || isLoading) return <Loading />;
 
   return (
     <div className="container max-w-8xl mx-auto px-[100px] py-6">
@@ -39,15 +87,11 @@ export default function FavoritesPage() {
 
       {/* Grid layout for favorite items */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {favorites?.map((item) => (
+        {favorites.map((item) => (
           <ItemCard
-            key={item._id}
-            itemId={item._id as Id<"commItems"> | Id<"mpItems">}
-            type={
-              item.type === "commission"
-                ? ITEM_TYPE.COMMISSION
-                : ITEM_TYPE.MARKETPLACE
-            }
+            key={`${item.type}_${item.id}`}
+            itemId={item.id}
+            type={item.type}
           />
         ))}
 

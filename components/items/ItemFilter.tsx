@@ -17,8 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal, X } from "lucide-react";
-import { ITEM_CATEGORIES } from "@/convex/constants";
+import { ITEM_CATEGORIES } from "@/utils/constants";
 import { Input } from "@/components/ui/input";
+import { QueryConstraint, where } from "firebase/firestore";
 
 interface FilterState {
   minPrice?: number;
@@ -29,7 +30,7 @@ interface FilterState {
 }
 
 interface FilterProps {
-  onFilterChange: (filters: FilterState) => void;
+  onFilterChange: (filters: FilterState, queryConstraints: QueryConstraint[]) => void;
   isMarketplace?: boolean;
   initialFilters?: FilterState;
 }
@@ -47,6 +48,7 @@ export function ItemFilter({
   isMarketplace = false,
   initialFilters = {},
 }: FilterProps) {
+  // State management
   const [priceRange, setPriceRange] = useState<number[]>([
     initialFilters.minPrice || 0,
     initialFilters.maxPrice || 1000,
@@ -68,6 +70,7 @@ export function ItemFilter({
   );
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
+  // Initialize active filters from props
   useEffect(() => {
     const initialActiveFilters: ActiveFilter[] = [];
 
@@ -111,8 +114,9 @@ export function ItemFilter({
     }
 
     setActiveFilters(initialActiveFilters);
-  }, []);
+  }, [initialFilters, isMarketplace]);
 
+  // Input handlers
   const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setMinPriceInput(inputValue);
@@ -139,6 +143,36 @@ export function ItemFilter({
         setPriceRange([priceRange[0], value]);
       }
     }
+  };
+
+  // Convert filters to Firebase query constraints
+  const createQueryConstraints = (filters: FilterState): QueryConstraint[] => {
+    const constraints: QueryConstraint[] = [];
+
+    if (filters.minPrice !== undefined) {
+      constraints.push(where("price", ">=", filters.minPrice));
+    }
+    if (filters.maxPrice !== undefined) {
+      constraints.push(where("price", "<=", filters.maxPrice));
+    }
+    if (filters.category) {
+      constraints.push(where("category", "==", filters.category));
+    }
+    if (isMarketplace && filters.condition) {
+      constraints.push(where("condition", "==", filters.condition));
+    }
+    if (!isMarketplace && filters.maxTurnaroundDays && filters.maxTurnaroundDays < 30) {
+      constraints.push(where("turnaroundDays", "<=", filters.maxTurnaroundDays));
+    }
+
+    // Add availability filter based on item type
+    if (isMarketplace) {
+      constraints.push(where("status", "==", "AVAILABLE"));
+    } else {
+      constraints.push(where("isAvailable", "==", true));
+    }
+
+    return constraints;
   };
 
   const handleFilterChange = () => {
@@ -179,13 +213,16 @@ export function ItemFilter({
 
     setActiveFilters(newFilters);
 
-    onFilterChange({
+    const filters: FilterState = {
       minPrice: minPrice > 0 ? minPrice : undefined,
       maxPrice: maxPrice < 1000 ? maxPrice : undefined,
       category,
       condition,
       maxTurnaroundDays: !isMarketplace ? maxTurnaroundDays : undefined,
-    });
+    };
+
+    const queryConstraints = createQueryConstraints(filters);
+    onFilterChange(filters, queryConstraints);
   };
 
   const removeFilter = (filterToRemove: ActiveFilter) => {
@@ -211,7 +248,7 @@ export function ItemFilter({
     );
     setActiveFilters(newFilters);
 
-    onFilterChange({
+    const updatedFilters: FilterState = {
       minPrice:
         filterToRemove.type === "price"
           ? undefined
@@ -232,7 +269,10 @@ export function ItemFilter({
           : !isMarketplace
             ? maxTurnaroundDays
             : undefined,
-    });
+    };
+
+    const queryConstraints = createQueryConstraints(updatedFilters);
+    onFilterChange(updatedFilters, queryConstraints);
   };
 
   const resetFilters = () => {
@@ -243,31 +283,35 @@ export function ItemFilter({
     setCondition(undefined);
     setMaxTurnaroundDays(30);
     setActiveFilters([]);
-    onFilterChange({});
+    
+    const baseConstraints = isMarketplace 
+      ? [where("status", "==", "AVAILABLE")]
+      : [where("isAvailable", "==", true)];
+      
+    onFilterChange({}, baseConstraints);
   };
 
-  const filterTabs =
-    activeFilters.length > 0 ? (
-      <div className="space-y-2">
-        <h4 className="text-sm font-rubik font-medium">Selected Filters</h4>
-        <div className="flex flex-wrap gap-2">
-          {activeFilters.map((filter, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm font-rubik"
+  const filterTabs = activeFilters.length > 0 && (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium">Selected Filters</h4>
+      <div className="flex flex-wrap gap-2">
+        {activeFilters.map((filter, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm"
+          >
+            <span>{filter.displayValue}</span>
+            <button
+              onClick={() => removeFilter(filter)}
+              className="hover:bg-secondary-foreground/10 rounded-full p-1"
             >
-              <span>{filter.displayValue}</span>
-              <button
-                onClick={() => removeFilter(filter)}
-                className="hover:bg-secondary-foreground/10 rounded-full p-1 cursor-pointer"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
       </div>
-    ) : null;
+    </div>
+  );
 
   const filterContent = (
     <div className="space-y-6">
