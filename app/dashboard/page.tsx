@@ -2,7 +2,7 @@
 
 import { useUser, SignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import Loading from "@/components/Loading";
+import Loading from "@/components/utils/Loading";
 import {
   Card,
   CardHeader,

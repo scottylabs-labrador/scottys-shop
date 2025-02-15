@@ -3,10 +3,9 @@ import localFont from "next/font/local";
 import { Caladea, Rubik } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { ConvexClientProvider } from "@/components/ConvexClientProvider";
-import Header from "@/components/Header";
-import Banner from "@/components/Banner";
-import SyncUserWithConvex from "@/components/SyncUserWithConvex";
+import Header from "@/components/nav/Header";
+import Banner from "@/components/nav/Banner";
+import SyncUserWithFirebase from "@/components/SyncUserWithFirebase";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -47,9 +46,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} ${caladea.variable} antialiased relative`}
       >
-        <ConvexClientProvider>
           <ClerkProvider>
-            <SyncUserWithConvex />
+            <SyncUserWithFirebase />
             <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0">
               <div className="fixed top-0 w-full z-[100]">
                 <Banner />
@@ -58,7 +56,6 @@ export default function RootLayout({
               <div className="max-w-8xl mx-auto px-3">{children}</div>
             </main>
           </ClerkProvider>
-        </ConvexClientProvider>
       </body>
     </html>
   );

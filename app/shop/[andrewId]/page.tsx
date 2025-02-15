@@ -1,23 +1,21 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import { useToast } from "@/hooks/use-toast";
-import Loading from "@/components/Loading";
-import ImageUploadModal from "@/components/ImageUploadModal";
+import Loading from "@/components/utils/Loading";
+import ImageUploadModal from "@/components/utils/ImageUploadModal";
 import BannerSection from "@/components/shop/BannerSection";
 import ProfileSection from "@/components/shop/ProfileSection";
 import ContentSection from "@/components/shop/ContentSection";
-
-interface FormData {
-  name: string;
-  title: string;
-  description: string;
-}
+import { ShopOwnerType, FormData} from "@/utils/ShopTypes";
+import { 
+  getUserByAndrewId, 
+  getUserByClerkId, 
+  updateUser,
+  type UserWithId 
+} from "@/firebase/users";
 
 export default function ShopPage() {
   // Router and Authentication
@@ -26,34 +24,82 @@ export default function ShopPage() {
   const andrewId = typeof params?.andrewId === "string" ? params.andrewId : "";
   const { isSignedIn, user } = useUser();
 
-  // Queries and Mutations
-  const shopOwner = useQuery(api.users.getUserByAndrewId, { andrewId });
-  const userData = useQuery(api.users.getUserByClerkId, {
-    clerkId: user?.id || "",
-  });
-  const shopItems = useQuery(api.users.getShopItems, {
-    userId: shopOwner?._id ?? ("" as Id<"users">),
-  });
-  const getFileUrl = useMutation(api.files.getUrl);
-  const updateShop = useMutation(api.users.updateShopSettings);
-
   // Local State
+  const [shopOwner, setShopOwner] = useState<UserWithId | null>(null);
+  const [userData, setUserData] = useState<UserWithId | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadType, setUploadType] = useState<"avatar" | "banner" | null>(
-    null
-  );
-
+  const [uploadType, setUploadType] = useState<"avatar" | "banner" | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-  const [originalBannerUrl, setOriginalBannerUrl] = useState<string | null>(
-    null
-  );
+  const [originalBannerUrl, setOriginalBannerUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     title: "",
     description: "",
   });
+
+  const adaptUserToShopOwner = (user: UserWithId): ShopOwnerType => {
+    return {
+      ...user,
+      _id: user.id
+    };
+  };
+
+  // Fetch shop owner data and items
+  useEffect(() => {
+    const fetchShopData = async () => {
+      try {
+        // Fetch shop owner data
+        const owner = await getUserByAndrewId(andrewId);
+        if (!owner) {
+          toast({
+            title: "Error",
+            description: "Shop not found",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setShopOwner(owner);
+        setAvatarUrl(owner.avatarUrl || null);
+        setBannerUrl(owner.shopBanner || null);
+        setOriginalBannerUrl(owner.shopBanner || null);
+
+      } catch (error) {
+        console.error("Error fetching shop data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load shop data",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (andrewId) {
+      fetchShopData();
+    }
+  }, [andrewId, toast]);
+
+  // Fetch current user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.id) return;
+
+      try {
+        const currentUser = await getUserByClerkId(user.id);
+        if (currentUser) {
+          setUserData(currentUser);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    if (isSignedIn) {
+      fetchUserData();
+    }
+  }, [isSignedIn, user?.id]);
 
   // Memoized Values
   const defaultShopTitle = useMemo(() => {
@@ -66,50 +112,9 @@ export default function ShopPage() {
     [isSignedIn, userData?.andrewId, andrewId]
   );
 
-  // Effects
-  useEffect(() => {
-    const fetchUrls = async () => {
-      if (!shopOwner?.clerkId) return;
-
-      try {
-        // Fetch avatar URL
-        if (shopOwner.avatarUrl) {
-          const url = shopOwner.avatarUrl.startsWith("http")
-            ? shopOwner.avatarUrl
-            : await getFileUrl({
-                storageId: shopOwner.avatarUrl,
-                userId: shopOwner.clerkId,
-              });
-          setAvatarUrl(url);
-        }
-
-        // Fetch banner URL
-        if (shopOwner.shopBanner) {
-          const url = shopOwner.shopBanner.startsWith("http")
-            ? shopOwner.shopBanner
-            : await getFileUrl({
-                storageId: shopOwner.shopBanner,
-                userId: shopOwner.clerkId,
-              });
-          setBannerUrl(url);
-          setOriginalBannerUrl(url);
-        }
-      } catch (error) {
-        console.error("Error fetching URLs:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load shop images",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchUrls();
-  }, [shopOwner, getFileUrl, toast]);
-
+  // Effect to update form data when shop owner changes
   useEffect(() => {
     if (shopOwner && !isEditing) {
-      // Only update if not in edit mode
       setFormData({
         name: shopOwner.name,
         title: shopOwner.shopTitle || defaultShopTitle,
@@ -145,17 +150,23 @@ export default function ShopPage() {
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isSignedIn || !isOwnShop || !user) return;
+    if (!isSignedIn || !isOwnShop || !shopOwner) return;
 
     setIsSaving(true);
     try {
-      await updateShop({
-        userId: user.id,
+      await updateUser(shopOwner.id, {
         name: formData.name,
         shopTitle: formData.title,
-        shopBanner: shopOwner?.shopBanner || "",
         shopDescription: formData.description,
       });
+      
+      setShopOwner(prev => prev ? {
+        ...prev,
+        name: formData.name,
+        shopTitle: formData.title,
+        shopDescription: formData.description,
+      } : null);
+      
       setIsEditing(false);
       toast({
         title: "Success",
@@ -185,30 +196,24 @@ export default function ShopPage() {
     setIsEditing(false);
   };
 
-  const handleFileUpload = async (storageId: string) => {
-    if (!isSignedIn || !isOwnShop || !user) return;
+  const handleFileUpload = async (fileUrl: string) => {
+    if (!isSignedIn || !isOwnShop || !shopOwner) return;
 
     try {
-      await updateShop({
-        userId: user.id,
-        name: shopOwner?.name || "",
-        shopTitle: shopOwner?.shopTitle || defaultShopTitle,
-        shopBanner:
-          uploadType === "banner" ? storageId : shopOwner?.shopBanner || "",
-        shopDescription: shopOwner?.shopDescription || "",
-        avatarUrl: uploadType === "avatar" ? storageId : shopOwner?.avatarUrl,
-      });
+      const updates = {
+        ...(uploadType === "avatar" && { avatarUrl: fileUrl }),
+        ...(uploadType === "banner" && { shopBanner: fileUrl }),
+      };
 
-      const url = await getFileUrl({
-        storageId: storageId,
-        userId: user.id,
-      });
+      await updateUser(shopOwner.id, updates);
 
       if (uploadType === "avatar") {
-        setAvatarUrl(url);
+        setAvatarUrl(fileUrl);
+        setShopOwner(prev => prev ? { ...prev, avatarUrl: fileUrl } : null);
       } else {
-        setBannerUrl(url);
-        setOriginalBannerUrl(url);
+        setBannerUrl(fileUrl);
+        setOriginalBannerUrl(fileUrl);
+        setShopOwner(prev => prev ? { ...prev, shopBanner: fileUrl } : null);
       }
 
       toast({
@@ -222,23 +227,23 @@ export default function ShopPage() {
         description: `Failed to update ${uploadType === "avatar" ? "avatar" : "banner"}`,
         variant: "destructive",
       });
+    } finally {
+      setUploadType(null);
     }
   };
 
   const handleResetBanner = async () => {
-    if (!isSignedIn || !isOwnShop || !user) return;
+    if (!isSignedIn || !isOwnShop || !shopOwner) return;
 
     try {
-      await updateShop({
-        userId: user.id,
-        name: shopOwner?.name || "",
-        shopTitle: shopOwner?.shopTitle || defaultShopTitle,
+      await updateUser(shopOwner.id, {
         shopBanner: "",
-        shopDescription: shopOwner?.shopDescription || "",
       });
 
       setBannerUrl(null);
       setOriginalBannerUrl(null);
+      setShopOwner(prev => prev ? { ...prev, shopBanner: "" } : null);
+      
       toast({
         title: "Success",
         description: "Banner removed successfully",
@@ -253,7 +258,7 @@ export default function ShopPage() {
     }
   };
 
-  if (!shopOwner || !shopItems) {
+  if (!shopOwner) {
     return <Loading />;
   }
 
@@ -269,11 +274,7 @@ export default function ShopPage() {
         />
 
         <ProfileSection
-          shopOwner={{
-            ...shopOwner,
-            shopTitle: shopOwner.shopTitle ?? null,
-            shopDescription: shopOwner.shopDescription ?? null,
-          }}
+          shopOwner={shopOwner ? adaptUserToShopOwner(shopOwner) : null}
           avatarUrl={avatarUrl}
           defaultShopTitle={defaultShopTitle}
           isOwnShop={isOwnShop}
@@ -286,7 +287,9 @@ export default function ShopPage() {
           handleEditClick={handleEditClick}
         />
 
-        <ContentSection shopItems={shopItems} isOwnShop={isOwnShop} />
+        <ContentSection 
+          sellerId={shopOwner?.id ?? ""}
+        />
 
         <ImageUploadModal
           isOpen={uploadType !== null}
