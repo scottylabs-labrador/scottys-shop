@@ -101,7 +101,7 @@ const ProfileSection = ({
                     placeholder="Enter shop title..."
                   />
                   <Textarea
-                    name="description"
+                    name= "description"
                     value={formData.description}
                     onChange={handleInputChange}
                     placeholder="Write a description for your shop..."

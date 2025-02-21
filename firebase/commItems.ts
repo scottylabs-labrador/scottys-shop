@@ -98,7 +98,7 @@ export const getCommItemsByPriceRange = async (minPrice: number, maxPrice: numbe
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data() 
     })) as CommItemWithId[];
   } catch (error) {
     console.error('Error getting items by price range:', error);

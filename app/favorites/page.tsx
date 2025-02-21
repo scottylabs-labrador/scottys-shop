@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { SignIn, useUser } from "@clerk/nextjs";
 import { ITEM_TYPE } from '@/utils/constants';
-import ItemCard from "@/components/items/ItemCard";
+import ItemCard from "@/components/items/itemcard/ItemCard";
 import Loading from "@/components/utils/Loading";
 import { getUserByClerkId } from '@/firebase/users';
 import { getCommItemById } from '@/firebase/commItems';

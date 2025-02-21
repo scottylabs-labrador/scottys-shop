@@ -228,6 +228,7 @@ const CustomProfileDropdown = () => {
             <AvatarImage
               src={avatarUrl || "/assets/default-avatar.jpg"}
               alt={user?.firstName || "User"}
+              className="object-cover"
             />
             <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
           </Avatar>

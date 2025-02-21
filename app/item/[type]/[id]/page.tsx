@@ -19,7 +19,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   MPITEM_STATUS, 
-  ITEM_TYPE,  
+  ITEM_TYPE,
+  ITEM_CONDITIONS
 } from "@/utils/constants";
 import { 
   getCommItemById,
@@ -31,6 +32,7 @@ import {
 } from "@/firebase/mpItems";
 import {
   getUserById,
+  getUserByClerkId,
   addToFavorites,
   removeFromFavorites,
   addToCart,
@@ -54,6 +56,8 @@ export default function ItemPage() {
   const [seller, setSeller] = useState<UserWithId | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
+  const [userFirebaseId, setUserFirebaseId] = useState<string | null>(null);
+  const [isOwnedByUser, setIsOwnedByUser] = useState(false);
   
   // UI state
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -65,8 +69,31 @@ export default function ItemPage() {
   
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
-  const isCommissionType = params.type === ITEM_TYPE.COMMISSION;
-  const isValidType = params.type === ITEM_TYPE.COMMISSION || params.type === ITEM_TYPE.MARKETPLACE;
+  const isCommissionType = params.type === ITEM_TYPE.COMMISSION.toLowerCase();
+  const isValidType = params.type === ITEM_TYPE.COMMISSION.toLowerCase() || params.type === ITEM_TYPE.MARKETPLACE.toLowerCase();
+
+
+  // Get user's Firestore ID from Clerk ID
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (isSignedIn && user?.id) {
+        try {
+          const userData = await getUserByClerkId(user.id);
+          if (userData) {
+            setUserFirebaseId(userData.id);
+            
+            // Build favorite item ID
+            const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
+            setIsFavorited(userData.favorites?.includes(favoriteItemId) || false);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [isSignedIn, user?.id, params.id, isCommissionType]);
 
   // Fetch item and seller data
   useEffect(() => {
@@ -93,6 +120,11 @@ export default function ItemPage() {
         if (fetchedSeller) {
           setSeller(fetchedSeller);
           setAvatarUrl(fetchedSeller.avatarUrl || DEFAULT_AVATAR);
+          
+          // Check if the current user is the seller
+          if (userFirebaseId && fetchedSeller.id === userFirebaseId) {
+            setIsOwnedByUser(true);
+          }
         }
 
         // Check if item is in cart
@@ -113,7 +145,7 @@ export default function ItemPage() {
     if (isValidType && params.id) {
       fetchData();
     }
-  }, [isCommissionType, params.id, isSignedIn, user?.id, isValidType, toast]);
+  }, [isCommissionType, params.id, isSignedIn, user?.id, isValidType, toast, userFirebaseId]);
 
   // Handle thumbnail navigation
   useEffect(() => {
@@ -168,20 +200,28 @@ export default function ItemPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isSignedIn || !user?.id || !item) return;
+    if (!isSignedIn || !userFirebaseId || !item) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add items to favorites",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
     
     try {
+      setIsLoading(true);
       if (isFavorited) {
-        await removeFromFavorites(user.id, favoriteItemId);
+        await removeFromFavorites(userFirebaseId, favoriteItemId);
         setIsFavorited(false);
         toast({
           title: "Success",
           description: "Removed from favorites"
         });
       } else {
-        await addToFavorites(user.id, favoriteItemId);
+        await addToFavorites(userFirebaseId, favoriteItemId);
         setIsFavorited(true);
         toast({
           title: "Success",
@@ -195,23 +235,32 @@ export default function ItemPage() {
         description: "Failed to update favorites",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCartAction = async () => {
-    if (!isSignedIn || !user?.id || !item) return;
+    if (!isSignedIn || !userFirebaseId || !item) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to add items to cart",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
       if (isInCart) {
-        await removeFromCart(user.id, params.id);
+        await removeFromCart(userFirebaseId, params.id);
         setIsInCart(false);
         toast({
           title: "Success",
           description: "Removed from cart"
         });
       } else {
-        await addToCart(user.id, params.id);
+        await addToCart(userFirebaseId, params.id);
         setIsInCart(true);
         toast({
           title: "Success",
@@ -230,8 +279,30 @@ export default function ItemPage() {
     }
   };
 
-  if (!isValidType || !item || !seller) {
-    return null;
+  // Helper function to get condition display text from the constant
+  const getConditionText = (conditionKey: string): string => {
+    // Find matching display text in ITEM_CONDITIONS
+    const conditionEntry = Object.entries(ITEM_CONDITIONS).find(
+      ([key, _]) => key === conditionKey
+    );
+    
+    return conditionEntry ? conditionEntry[1] : 'Unknown';
+  };
+
+  if (!isValidType) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <h2 className="text-2xl font-semibold">Invalid item type: {params.type}</h2>
+      </div>
+    );
+  }
+
+  if (!item || !seller) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <h2 className="text-xl font-medium">Loading item details...</h2>
+      </div>
+    );
   }
 
   const validImages = item.images.filter(url => url && url.trim() !== "");
@@ -307,13 +378,15 @@ export default function ItemPage() {
               onMouseEnter={() => setIsMainImageHovered(true)}
               onMouseLeave={() => setIsMainImageHovered(false)}
             >
-              <Image
-                src={validImages[currentIndex]}
-                alt={`Main image ${currentIndex + 1}`}
-                fill
-                className="object-cover"
-                priority={currentIndex === 0}
-              />
+              {validImages.length > 0 && (
+                <Image
+                  src={validImages[currentIndex]}
+                  alt={`Main image ${currentIndex + 1}`}
+                  fill
+                  className="object-cover"
+                  priority={currentIndex === 0}
+                />
+              )}
 
               {validImages.length > 1 && isMainImageHovered && (
                 <>
@@ -332,22 +405,35 @@ export default function ItemPage() {
                 </>
               )}
 
-              {/* Favorite Button */}
-              <button
-                className={cn(
-                  "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200",
-                  isFavorited ? "opacity-100" : isMainImageHovered ? "opacity-80" : "opacity-0",
-                  "hover:bg-gray-200"
-                )}
-                onClick={handleFavoriteClick}
-              >
-                <Heart 
+              {/* Favorite Button - Hidden if user owns the item */}
+              {!isOwnedByUser ? (
+                <button
                   className={cn(
-                    "w-5 h-5",
-                    isFavorited && "fill-rose-500 text-rose-500"
-                  )} 
-                />
-              </button>
+                    "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200",
+                    isFavorited ? "opacity-100" : isMainImageHovered ? "opacity-80" : "opacity-0",
+                    "hover:bg-gray-200"
+                  )}
+                  onClick={handleFavoriteClick}
+                  disabled={isLoading}
+                  title={isOwnedByUser ? "You can't favorite your own item" : (isFavorited ? "Remove from favorites" : "Add to favorites")}
+                >
+                  <Heart 
+                    className={cn(
+                      "w-5 h-5",
+                      isFavorited && "fill-rose-500 text-rose-500"
+                    )} 
+                  />
+                </button>
+              ) : (
+                <div
+                  className={cn(
+                    "absolute top-3 right-3 px-2 py-1 rounded-md bg-black/75 text-white text-xs font-medium transition-all duration-200",
+                    isMainImageHovered ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                  Your Item
+                </div>
+              )}
 
               {/* Image Navigation Dots */}
               {validImages.length > 1 && (
@@ -393,7 +479,7 @@ export default function ItemPage() {
                   </div>
                 ) : (
                   <span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
-                    {(item as MPItemWithId).condition}
+                    {getConditionText((item as MPItemWithId).condition)}
                   </span>
                 )}
               </div>
@@ -406,32 +492,46 @@ export default function ItemPage() {
               <p className="text-4xl font-bold">${item.price.toFixed(2)}</p>
               {/* Action Buttons */}
               <div className="pt-6 space-y-3">
-                <Button
-                  onClick={handleCartAction}
-                  className={cn(
-                    "w-full font-bold",
-                    isInCart
-                      ? "bg-gray-400 hover:bg-slate-500"
-                      : "bg-black hover:bg-gray-800"
-                  )}
-                  size="lg"
-                  disabled={!canPurchase || isLoading}
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {isLoading 
-                    ? "Processing..." 
-                    : isInCart 
-                      ? "Remove from Cart" 
-                      : "Add to Cart"}
-                </Button>
-                <Link href={`/messages/${seller.id}`}>
+                {isOwnedByUser ? (
+                  <Link href={`/item/edit/${params.type}/${params.id}`}>
+                    <Button
+                      className="w-full font-bold bg-blue-600 hover:bg-blue-700"
+                      size="lg"
+                    >
+                      Edit Item
+                    </Button>
+                  </Link>
+                ) : (
                   <Button
-                    className="w-full font-bold text-black bg-white border-2 border-black hover:bg-gray-200"
+                    onClick={handleCartAction}
+                    className={cn(
+                      "w-full font-bold",
+                      isInCart
+                        ? "bg-gray-400 hover:bg-slate-500"
+                        : "bg-black hover:bg-gray-800"
+                    )}
                     size="lg"
+                    disabled={!canPurchase || isLoading}
                   >
-                    Message Seller
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    {isLoading 
+                      ? "Processing..." 
+                      : isInCart 
+                        ? "Remove from Cart" 
+                        : "Add to Cart"}
                   </Button>
-                </Link>
+                )}
+                
+                {!isOwnedByUser && (
+                  <Link href={`/messages/${seller.id}`}>
+                    <Button
+                      className="w-full font-bold text-black bg-white border-2 border-black hover:bg-gray-200"
+                      size="lg"
+                    >
+                      Message Seller
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -439,13 +539,11 @@ export default function ItemPage() {
             <Link href={`/shop/${seller.andrewId}`}>
               <div className="flex items-center gap-3 pt-3 px-2 group">
                 <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-black">
-                  <AvatarImage src={avatarUrl || DEFAULT_AVATAR} />
+                  <AvatarImage src={avatarUrl || DEFAULT_AVATAR}
+                               className="object-cover" />
                   <AvatarFallback>{seller.name[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="font-semibold group-hover:text-gray-600 transition-colors">
-                    {seller.name}
-                  </p>
                   <p className="text-sm text-gray-600">@{seller.andrewId}</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />

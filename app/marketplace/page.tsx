@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import ItemCard from "@/components/items/ItemCard";
+import ItemCard from "@/components/items/itemcard/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
 import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';

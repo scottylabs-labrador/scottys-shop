@@ -66,7 +66,7 @@
         // Create a unique filename
         const timestamp = Date.now();
         const filename = `${timestamp}-${selectedFile.name}`;
-        const storageRef = ref(storage, `shop-images/${filename}`);
+        const storageRef = ref(storage, `user-images/${filename}`);
 
         // Create upload task
         const uploadTask = uploadBytesResumable(storageRef, selectedFile);
