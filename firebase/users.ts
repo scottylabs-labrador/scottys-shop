@@ -143,10 +143,11 @@ export const removeFromFavorites = async (userId: string, itemId: string): Promi
 };
 
 
-// Check if item is in cart
+// Check if item is in cart using clerkId
 export const isItemInCart = async (userId: string, itemId: string): Promise<boolean> => {
   try {
-    const userDoc = await getDoc(doc(usersCollection, userId));
+    const q = query(usersCollection, where("clerkId", "==", userId));
+    const userDoc = (await getDocs(q)).docs[0];
     if (userDoc.exists()) {
       const userData = userDoc.data() as User;
       return userData.cart.includes(itemId);
