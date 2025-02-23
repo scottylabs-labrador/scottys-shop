@@ -2,7 +2,6 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import Loading from "@/components/utils/Loading";
 import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
@@ -69,6 +68,8 @@ export default function CartPage() {
         };
         fetchItems();
     }, [isSignedIn, user?.id]);
+
+    if (loading) return <Loading />;
 
     return (
         <div className="flex flex-col max-w-7xl mx-auto px-4 py-6">

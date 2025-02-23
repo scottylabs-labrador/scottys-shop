@@ -1,20 +1,55 @@
 "use client";
 
-// import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/constants";
-// import ItemCard from "@/components/items/ItemCard";
+import { useState, useEffect } from "react";
+import ItemCard from "@/components/items/itemcard/ItemCard";
+import Loading from "@/components/utils/Loading";
+import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
+import { 
+  getMPItemsByStatus,
+  type MPItemWithId
+} from '@/firebase/mpItems';
+import { 
+    getAvailableCommItems,
+    type CommItemWithId
+  } from '@/firebase/commItems';
 
 export default function Home() {
-//   const mpItem = useQuery(api.mpItems.search, {
-//     status: MPITEM_STATUS.AVAILABLE,
-//   });
-//   const commItem = useQuery(api.commItems.search, { isAvailable: true });
+  const [mpItems, setMPItems] = useState<MPItemWithId[]>([]);
+  const [commItems, setCommItems] = useState<CommItemWithId[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [randomMPIndex, setRandomMPIndex] = useState(0);
+  const [randomCommIndex, setRandomCommIndex] = useState(0);
 
-//   const randomMPIndex =
-//     mpItem && mpItem.length > 0 ? Math.floor(Math.random() * mpItem.length) : 0;
-//   const randomCommIndex =
-//     commItem && commItem.length > 0
-//       ? Math.floor(Math.random() * commItem.length)
-//       : 0;
+  useEffect(() => {
+      const fetchItems = async () => {
+          setLoading(true);
+          try {
+              let MPItems: MPItemWithId[] = [];
+              let CommItems: CommItemWithId[] = [];
+
+              MPItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE);  // determine how we want to handle this
+              CommItems = await getAvailableCommItems();
+              
+              setMPItems(MPItems);
+              setCommItems(CommItems);
+          } catch (error) {
+              console.error('Error fetching items:', error);
+              setMPItems([]);
+              setCommItems([]);
+          } finally {
+              setLoading(false);
+          }
+      };
+      fetchItems();
+  }, []);  
+
+  // Generate random featured items only on project recompile 
+  useEffect(() => {
+    setRandomMPIndex(mpItems && mpItems.length > 0 ? Math.floor(Math.random() * mpItems.length) : 0);
+    setRandomCommIndex(commItems && commItems.length > 0 ? Math.floor(Math.random() * commItems.length) : 0);
+  }, [mpItems, commItems]);
+
+  if (loading) return <Loading />;
 
   return (
     <div className="flex flex-col md:flex-row font-rubik">
@@ -22,13 +57,14 @@ export default function Home() {
         <h1 className="text-5xl font-caladea mb-6">
           Welcome to Scotty&apos;s Shop!
         </h1>
-        {/* <div className="grid grid-cols-2 gap-4">
+        
+        <div className="grid grid-cols-2 gap-4">
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
               <div className="text-xl mb-2">Featured Marketplace Item</div>
-              {mpItem && mpItem.length > 0 ? (
+              {mpItems && mpItems.length > 0 ? (
                 <ItemCard
-                  itemId={mpItem[randomMPIndex]._id}
+                  itemId={mpItems[randomMPIndex].id}
                   type={ITEM_TYPE.MARKETPLACE}
                 />
               ) : (
@@ -42,9 +78,9 @@ export default function Home() {
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
               <div className="text-xl mb-2">Featured Commission</div>
-              {commItem && commItem.length > 0 ? (
+              {commItems && commItems.length > 0 ? (
                 <ItemCard
-                  itemId={commItem[randomCommIndex]._id}
+                  itemId={commItems[randomCommIndex].id}
                   type={ITEM_TYPE.COMMISSION}
                 />
               ) : (
@@ -52,7 +88,8 @@ export default function Home() {
               )}
             </div>
           </div>
-        </div> */}
+        </div>
+
       </main>
     </div>
   );
