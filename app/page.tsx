@@ -43,7 +43,7 @@ export default function Home() {
       fetchItems();
   }, []);  
 
-  // Generate random featured items only on project recompile 
+  // Generate random featured items on refresh
   useEffect(() => {
     setRandomMPIndex(mpItems && mpItems.length > 0 ? Math.floor(Math.random() * mpItems.length) : 0);
     setRandomCommIndex(commItems && commItems.length > 0 ? Math.floor(Math.random() * commItems.length) : 0);
@@ -61,7 +61,7 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-4">
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
-              <div className="text-xl mb-2">Featured Marketplace Item</div>
+              <div className="text-xl mb-3">Featured Marketplace Item</div>
               {mpItems && mpItems.length > 0 ? (
                 <ItemCard
                   itemId={mpItems[randomMPIndex].id}
@@ -77,7 +77,7 @@ export default function Home() {
 
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
-              <div className="text-xl mb-2">Featured Commission</div>
+              <div className="text-xl mb-3">Featured Commission</div>
               {commItems && commItems.length > 0 ? (
                 <ItemCard
                   itemId={commItems[randomCommIndex].id}
