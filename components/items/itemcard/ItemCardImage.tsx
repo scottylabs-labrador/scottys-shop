@@ -2,17 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, ChevronLeft, ChevronRight, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { ITEM_TYPE } from '@/utils/constants';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface ItemCardImageProps {
   item: any;

@@ -41,6 +41,7 @@ import {
   type UserWithId
 } from "@/firebase/users";
 import { useToast } from "@/hooks/use-toast";
+import Loading from "@/components/utils/Loading";
 
 const DEFAULT_AVATAR = "/assets/default-avatar.png";
 
@@ -300,7 +301,7 @@ export default function ItemPage() {
   if (!item || !seller) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h2 className="text-xl font-medium">Loading item details...</h2>
+        <Loading/>
       </div>
     );
   }

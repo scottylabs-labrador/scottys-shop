@@ -257,7 +257,7 @@ const handleGoBack = () => {
     getUserByClerkId(user.id)
       .then(userData => {
         if (userData && userData.andrewId) {
-          router.push(`/shop/${userData.andrewId}`);
+          router.push(`/dashboard`);
         } else {
           console.error("Error fetching user data:");
         }

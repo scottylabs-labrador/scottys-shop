@@ -12,7 +12,6 @@ interface BannerSectionProps {
 
 export default function BannerSection({
   bannerUrl,
-  isEditing,
   isOwnShop,
   setUploadType,
   handleResetBanner,
@@ -27,7 +26,7 @@ export default function BannerSection({
       <div
         className="relative h-80 overflow-hidden"
         role="banner"
-        onClick={() => isOwnShop && isEditing && setUploadType("banner")}
+        onClick={() => isOwnShop && setUploadType("banner")}
       >
         {/* Banner Image */}
         <div
@@ -37,11 +36,12 @@ export default function BannerSection({
           }}
           aria-label="Shop banner"
         />
+        
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
+        
         {/* Edit Controls */}
-        {isOwnShop && isEditing && (
+        {isOwnShop && (
           <>
             <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-all duration-200 flex items-center justify-center cursor-pointer group">
               <div className="transform translate-y-4 group-hover:translate-y-0 transition-all duration-200 flex flex-col items-center justify-center">
@@ -51,6 +51,7 @@ export default function BannerSection({
                 </p>
               </div>
             </div>
+            
             <Button
               type="button"
               variant="outline"
