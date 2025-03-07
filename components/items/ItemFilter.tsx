@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal, X } from "lucide-react";
-import { ITEM_CATEGORIES } from "@/utils/constants";
+import { ITEM_CATEGORIES } from "@/utils/ItemConstants";
 import { Input } from "@/components/ui/input";
 import { QueryConstraint, where } from "firebase/firestore";
 
@@ -30,7 +30,10 @@ interface FilterState {
 }
 
 interface FilterProps {
-  onFilterChange: (filters: FilterState, queryConstraints: QueryConstraint[]) => void;
+  onFilterChange: (
+    filters: FilterState,
+    queryConstraints: QueryConstraint[]
+  ) => void;
   isMarketplace?: boolean;
   initialFilters?: FilterState;
 }
@@ -161,8 +164,14 @@ export function ItemFilter({
     if (isMarketplace && filters.condition) {
       constraints.push(where("condition", "==", filters.condition));
     }
-    if (!isMarketplace && filters.maxTurnaroundDays && filters.maxTurnaroundDays < 30) {
-      constraints.push(where("turnaroundDays", "<=", filters.maxTurnaroundDays));
+    if (
+      !isMarketplace &&
+      filters.maxTurnaroundDays &&
+      filters.maxTurnaroundDays < 30
+    ) {
+      constraints.push(
+        where("turnaroundDays", "<=", filters.maxTurnaroundDays)
+      );
     }
 
     // Add availability filter based on item type
@@ -283,35 +292,13 @@ export function ItemFilter({
     setCondition(undefined);
     setMaxTurnaroundDays(30);
     setActiveFilters([]);
-    
-    const baseConstraints = isMarketplace 
+
+    const baseConstraints = isMarketplace
       ? [where("status", "==", "AVAILABLE")]
       : [where("isAvailable", "==", true)];
-      
+
     onFilterChange({}, baseConstraints);
   };
-
-  const filterTabs = activeFilters.length > 0 && (
-    <div className="space-y-2">
-      <h4 className="text-sm font-medium">Selected Filters</h4>
-      <div className="flex flex-wrap gap-2">
-        {activeFilters.map((filter, index) => (
-          <div
-            key={index}
-            className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm"
-          >
-            <span>{filter.displayValue}</span>
-            <button
-              onClick={() => removeFilter(filter)}
-              className="hover:bg-secondary-foreground/10 rounded-full p-1"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 
   const filterContent = (
     <div className="space-y-6">
@@ -437,26 +424,50 @@ export function ItemFilter({
   );
 
   return (
-    <div className="p-4">
+    <div className="flex flex-wrap items-center gap-3">
       <Sheet>
         <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full md:w-auto rounded-full font-rubik"
-          >
+          <Button variant="outline" className="rounded-full font-rubik">
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Filters
           </Button>
         </SheetTrigger>
         <SheetContent side="left">
           <SheetHeader>
-            <SheetTitle></SheetTitle>
+            <SheetTitle>Filters</SheetTitle>
             <SheetClose />
           </SheetHeader>
-          {filterTabs}
           {filterContent}
         </SheetContent>
       </Sheet>
+
+      {/* Show active filters outside the sheet */}
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {activeFilters.map((filter, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm"
+            >
+              <span>{filter.displayValue}</span>
+              <button
+                onClick={() => removeFilter(filter)}
+                className="hover:bg-secondary-foreground/10 rounded-full p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          {activeFilters.length > 0 && (
+            <button
+              onClick={resetFilters}
+              className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 hover:underline"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -26,9 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SearchBar from "@/components/nav/SearchBar";
-import { getUserByClerkId,
-  type UserWithId
- } from "@/firebase/users";
+import { getUserByClerkId, type UserWithId } from "@/firebase/users";
 
 // Navigation items for header menu
 const NAVIGATION_ITEMS = ["commissions", "marketplace", "requests"];
@@ -257,7 +255,7 @@ const Header = () => {
   const { user } = useClerk();
   const [userData, setUserData] = useState<UserWithId | null>(null);
 
-   // Fetch user data from Firebase
+  // Fetch user data from Firebase
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.id) return;
@@ -273,7 +271,7 @@ const Header = () => {
     };
 
     fetchUserData();
-});
+  });
 
   return (
     <nav className="border-b py-3 sticky top-0 bg-white z-50 font-rubik">
@@ -357,16 +355,16 @@ const Header = () => {
               <Link
                 href="/favorites"
                 title="Favorites"
-                className="p-2 hover:bg-gray-100 rounded-full"
+                className="p-2 hover:bg-gray-100 rounded-full group"
               >
-                <Heart className="w-6 h-6 hover:text-[#C41230]" />
+                <Heart className="w-6 h-6 group-hover:text-[#C41230]" />
               </Link>
               <Link
                 href="/messages"
                 title="Messages"
-                className="p-2 hover:bg-gray-100 rounded-full"
+                className="p-2 hover:bg-gray-100 rounded-full group"
               >
-                <MessageCircle className="w-6 h-6 hover:text-[#C41230]" />
+                <MessageCircle className="w-6 h-6 group-hover:text-[#C41230]" />
               </Link>
               {/* Custom Store Icon */}
               <Link
@@ -374,22 +372,64 @@ const Header = () => {
                 title="My Shop"
                 className="p-2 hover:bg-gray-100 rounded-full group"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="-0.75 -0.75 21 21" 
-                  height="25" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="-0.75 -0.75 21 21"
+                  height="25"
                   width="25"
                   className="group-hover:text-[#C41230]"
                 >
                   <g>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M2.0892857142857144 11.839285714285714V18.107142857142858c0 0.18469285714285713 0.07337571428571428 0.36186428571428564 0.20398392857142855 0.49251428571428574 0.1305942857142857 0.13051071428571429 0.3077378571428571 0.20391428571428571 0.4924446428571428 0.20391428571428571h13.928571428571427c0.18469285714285713 0 0.36186428571428564 -0.07340357142857142 0.49251428571428574 -0.20391428571428571 0.13051071428571429 -0.13065 0.20391428571428571 -0.3078214285714286 0.20391428571428571 -0.49251428571428574V11.839285714285714" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M11.142857142857142 11.839285714285714v6.9642857142857135" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M2.0892857142857144 13.928571428571427H11.142857142857142" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M0.6964285714285714 5.571428571428571 2.7857142857142856 0.6964285714285714h13.928571428571427L18.803571428571427 5.571428571428571H0.6964285714285714Z" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M6.657857142857143 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.29348892857142855 1.4473735714285714 -0.8159217857142858 1.9697924999999998C5.319516428571428 9.45651107142857 4.610956071428571 9.75 3.872142857142857 9.75H3.4821428571428568c-0.7388132142857142 0 -1.4473735714285714 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C0.9899230714285713 8.411659285714284 0.6964285714285714 7.703098928571428 0.6964285714285714 6.9642857142857135V5.571428571428571" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M12.883928571428571 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.29348892857142855 1.4473735714285714 -0.8159217857142858 1.9697924999999998C11.545587857142856 9.45651107142857 10.8370275 9.75 10.098214285714285 9.75h-0.6964285714285714c-0.7388132142857142 0 -1.4473735714285714 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C6.9095603571428565 8.411659285714284 6.616071428571428 7.703098928571428 6.616071428571428 6.9642857142857135V5.571428571428571" strokeWidth="1.5"></path>
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" d="M18.803571428571427 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.293475 1.4473735714285714 -0.8159357142857142 1.9697924999999998C17.465175 9.45651107142857 16.75662857142857 9.75 16.017857142857142 9.75h-0.3482142857142857c-0.7387714285714285 0 -1.4473178571428569 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C13.1774175 8.411659285714284 12.883928571428571 7.703098928571428 12.883928571428571 6.9642857142857135V5.571428571428571" strokeWidth="1.5"></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.0892857142857144 11.839285714285714V18.107142857142858c0 0.18469285714285713 0.07337571428571428 0.36186428571428564 0.20398392857142855 0.49251428571428574 0.1305942857142857 0.13051071428571429 0.3077378571428571 0.20391428571428571 0.4924446428571428 0.20391428571428571h13.928571428571427c0.18469285714285713 0 0.36186428571428564 -0.07340357142857142 0.49251428571428574 -0.20391428571428571 0.13051071428571429 -0.13065 0.20391428571428571 -0.3078214285714286 0.20391428571428571 -0.49251428571428574V11.839285714285714"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M11.142857142857142 11.839285714285714v6.9642857142857135"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.0892857142857144 13.928571428571427H11.142857142857142"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M0.6964285714285714 5.571428571428571 2.7857142857142856 0.6964285714285714h13.928571428571427L18.803571428571427 5.571428571428571H0.6964285714285714Z"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6.657857142857143 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.29348892857142855 1.4473735714285714 -0.8159217857142858 1.9697924999999998C5.319516428571428 9.45651107142857 4.610956071428571 9.75 3.872142857142857 9.75H3.4821428571428568c-0.7388132142857142 0 -1.4473735714285714 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C0.9899230714285713 8.411659285714284 0.6964285714285714 7.703098928571428 0.6964285714285714 6.9642857142857135V5.571428571428571"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12.883928571428571 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.29348892857142855 1.4473735714285714 -0.8159217857142858 1.9697924999999998C11.545587857142856 9.45651107142857 10.8370275 9.75 10.098214285714285 9.75h-0.6964285714285714c-0.7388132142857142 0 -1.4473735714285714 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C6.9095603571428565 8.411659285714284 6.616071428571428 7.703098928571428 6.616071428571428 6.9642857142857135V5.571428571428571"
+                      strokeWidth="1.5"
+                    ></path>
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M18.803571428571427 5.571428571428571v1.3928571428571428c0 0.7388132142857142 -0.293475 1.4473735714285714 -0.8159357142857142 1.9697924999999998C17.465175 9.45651107142857 16.75662857142857 9.75 16.017857142857142 9.75h-0.3482142857142857c-0.7387714285714285 0 -1.4473178571428569 -0.29348892857142855 -1.9697924999999998 -0.8159217857142858C13.1774175 8.411659285714284 12.883928571428571 7.703098928571428 12.883928571428571 6.9642857142857135V5.571428571428571"
+                      strokeWidth="1.5"
+                    ></path>
                   </g>
                 </svg>
               </Link>

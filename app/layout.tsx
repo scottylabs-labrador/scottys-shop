@@ -22,6 +22,7 @@ const rubik = Rubik({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-rubik",
+  weight: ["400", "500", "700"],
 });
 
 const caladea = Caladea({
@@ -46,16 +47,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} ${caladea.variable} antialiased relative`}
       >
-          <ClerkProvider>
-            <SyncUserWithFirebase />
-            <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0">
-              <div className="fixed top-0 w-full z-[100]">
-                <Banner/>
-                <Header/>
-              </div>
-              <div className="max-w-8xl mx-auto px-3">{children}</div>
-            </main>
-          </ClerkProvider>
+        <ClerkProvider>
+          <SyncUserWithFirebase />
+          <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0">
+            <div className="fixed top-0 w-full z-[100]">
+              <Banner />
+              <Header />
+            </div>
+            <div className="max-w-8xl mx-auto px-3">{children}</div>
+          </main>
+        </ClerkProvider>
       </body>
     </html>
   );

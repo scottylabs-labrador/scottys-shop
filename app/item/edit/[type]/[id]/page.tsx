@@ -21,7 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MPITEM_STATUS, ITEM_CATEGORIES, ITEM_CONDITIONS, ITEM_TYPE } from "@/utils/constants";
+import {
+  MPITEM_STATUS,
+  ITEM_CATEGORIES,
+  ITEM_CONDITIONS,
+  ITEM_TYPE,
+} from "@/utils/ItemConstants";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EditItemPage() {
@@ -29,7 +34,9 @@ export default function EditItemPage() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const { toast } = useToast();
-  const [itemType, setItemType] = useState<"marketplace" | "commission">("marketplace");
+  const [itemType, setItemType] = useState<"marketplace" | "commission">(
+    "marketplace"
+  );
   const [itemId, setItemId] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +55,7 @@ export default function EditItemPage() {
   const [condition, setCondition] = useState("");
   const [turnaroundDays, setTurnaroundDays] = useState<number>(7);
   const [tags, setTags] = useState("");
-  
+
   // Form validation errors
   const [errors, setErrors] = useState<{
     title?: string;
@@ -67,11 +74,11 @@ export default function EditItemPage() {
       // URL structure: /item/edit/:type/:id
       const typeParam = params.type as string;
       const idParam = params.id as string;
-      
+
       if (typeParam === "marketplace" || typeParam === "commission") {
         setItemType(typeParam);
       }
-      
+
       if (idParam) {
         setItemId(idParam);
       }
@@ -94,7 +101,7 @@ export default function EditItemPage() {
           toast({
             title: "Error",
             description: "Failed to fetch user data",
-            variant: "destructive"
+            variant: "destructive",
           });
         }
       }
@@ -107,34 +114,34 @@ export default function EditItemPage() {
   useEffect(() => {
     const fetchItemData = async () => {
       if (!itemId || !userId) return;
-      
+
       setInitialLoading(true);
       try {
         let itemData: MPItemWithId | CommItemWithId | null = null;
-        
+
         if (itemType === "marketplace") {
           itemData = await getMPItemById(itemId);
         } else {
           itemData = await getCommItemById(itemId);
         }
-        
+
         if (!itemData) {
           toast({
             title: "Error",
             description: "Item not found",
-            variant: "destructive"
+            variant: "destructive",
           });
           if (isLoaded && user) {
             // Get userData again to access the andrewId
             getUserByClerkId(user.id)
-              .then(userData => {
+              .then((userData) => {
                 if (userData && userData.andrewId) {
                   router.push(`/dashboard`);
                 } else {
                   console.error("Error fetching user data:");
                 }
               })
-              .catch(error => {
+              .catch((error) => {
                 console.error("Error fetching user data:", error);
               });
           } else {
@@ -142,25 +149,25 @@ export default function EditItemPage() {
           }
           return;
         }
-        
+
         // Verify that user owns this item
         if (itemData.sellerId !== userId) {
           toast({
             title: "Unauthorized",
             description: "You don't have permission to edit this item",
-            variant: "destructive"
+            variant: "destructive",
           });
           if (isLoaded && user) {
             // Get userData again to access the andrewId
             getUserByClerkId(user.id)
-              .then(userData => {
+              .then((userData) => {
                 if (userData && userData.andrewId) {
                   router.push(`/dashboard`);
                 } else {
                   console.error("Error fetching user data:");
                 }
               })
-              .catch(error => {
+              .catch((error) => {
                 console.error("Error fetching user data:", error);
               });
           } else {
@@ -168,50 +175,51 @@ export default function EditItemPage() {
           }
           return;
         }
-        
+
         // Populate form fields
         setTitle(itemData.title);
         setDescription(itemData.description);
         setPrice(itemData.price);
-        
+
         // For category, find the key that maps to the stored value
-        const categoryKey = Object.entries(ITEM_CATEGORIES).find(
-          ([_, value]) => value === itemData.category
-        )?.[0] || "";
+        const categoryKey =
+          Object.entries(ITEM_CATEGORIES).find(
+            ([_, value]) => value === itemData.category
+          )?.[0] || "";
         setCategory(categoryKey);
-        
+
         if (itemType === "marketplace" && "condition" in itemData) {
           // Find the key that maps to the stored condition value
-          const conditionKey = Object.entries(ITEM_CONDITIONS).find(
-            ([_, value]) => value === itemData.condition
-          )?.[0] || "";
+          const conditionKey =
+            Object.entries(ITEM_CONDITIONS).find(
+              ([_, value]) => value === itemData.condition
+            )?.[0] || "";
           setCondition(conditionKey);
         } else if ("turnaroundDays" in itemData) {
           setTurnaroundDays(itemData.turnaroundDays);
         }
-        
+
         // Set tags
         if (itemData.tags && Array.isArray(itemData.tags)) {
           setTags(itemData.tags.join(", "));
         }
-        
+
         // Set current images
         if (itemData.images && Array.isArray(itemData.images)) {
           setCurrentImageUrls(itemData.images);
         }
-        
       } catch (error) {
         console.error("Error fetching item data:", error);
         toast({
           title: "Error",
           description: "Failed to fetch item data",
-          variant: "destructive"
+          variant: "destructive",
         });
       } finally {
         setInitialLoading(false);
       }
     };
-    
+
     fetchItemData();
   }, [itemId, itemType, userId, router, toast]);
 
@@ -219,35 +227,40 @@ export default function EditItemPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      
+
       // Check file types
-      const validFiles = newFiles.filter(file => 
-        file.type === "image/jpeg" || 
-        file.type === "image/png" || 
-        file.type === "image/webp"
+      const validFiles = newFiles.filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/webp"
       );
-      
+
       // Check if adding these would exceed the limit
-      const totalImages = currentImageUrls.length + images.length + validFiles.length;
+      const totalImages =
+        currentImageUrls.length + images.length + validFiles.length;
       if (totalImages > 5) {
-        setErrors(prev => ({...prev, images: "You can upload a maximum of 5 images"}));
+        setErrors((prev) => ({
+          ...prev,
+          images: "You can upload a maximum of 5 images",
+        }));
         return;
       }
-      
-      setImages(prevImages => [...prevImages, ...validFiles]);
-      setErrors(prev => ({...prev, images: undefined}));
-      
+
+      setImages((prevImages) => [...prevImages, ...validFiles]);
+      setErrors((prev) => ({ ...prev, images: undefined }));
+
       // Generate preview URLs
-      validFiles.forEach(file => {
+      validFiles.forEach((file) => {
         const url = URL.createObjectURL(file);
-        setImageUrls(prev => [...prev, url]);
+        setImageUrls((prev) => [...prev, url]);
       });
     }
   };
 
   // Remove a current image
   const removeCurrentImage = (index: number) => {
-    setCurrentImageUrls(prevUrls => {
+    setCurrentImageUrls((prevUrls) => {
       const newUrls = [...prevUrls];
       newUrls.splice(index, 1);
       return newUrls;
@@ -256,13 +269,13 @@ export default function EditItemPage() {
 
   // Remove a new image
   const removeNewImage = (index: number) => {
-    setImages(prevImages => {
+    setImages((prevImages) => {
       const newImages = [...prevImages];
       newImages.splice(index, 1);
       return newImages;
     });
-    
-    setImageUrls(prevUrls => {
+
+    setImageUrls((prevUrls) => {
       const newUrls = [...prevUrls];
       URL.revokeObjectURL(newUrls[index]); // Clean up URL object
       newUrls.splice(index, 1);
@@ -273,15 +286,18 @@ export default function EditItemPage() {
   // Upload new images to Firebase Storage
   const uploadImages = async (): Promise<string[]> => {
     if (images.length === 0) return [];
-    
+
     setImageUploading(true);
     const uploadPromises = images.map(async (image, index) => {
-      const storageRef = ref(storage, `items/${userId}/${Date.now()}-${index}-${image.name}`);
+      const storageRef = ref(
+        storage,
+        `items/${userId}/${Date.now()}-${index}-${image.name}`
+      );
       const snapshot = await uploadBytes(storageRef, image);
       const downloadUrl = await getDownloadURL(snapshot.ref);
       return downloadUrl;
     });
-    
+
     try {
       const urls = await Promise.all(uploadPromises);
       setImageUploading(false);
@@ -296,40 +312,40 @@ export default function EditItemPage() {
   // Validate form input
   const validateForm = () => {
     const newErrors: typeof errors = {};
-    
+
     if (!title || title.length < 3) {
       newErrors.title = "Title must be at least 3 characters";
     } else if (title.length > 100) {
       newErrors.title = "Title cannot exceed 100 characters";
     }
-    
+
     if (!description || description.length < 10) {
       newErrors.description = "Description must be at least 10 characters";
     } else if (description.length > 1000) {
       newErrors.description = "Description cannot exceed 1000 characters";
     }
-    
+
     if (!price || price <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
-    
+
     if (!category) {
       newErrors.category = "Please select a category";
     }
-    
+
     if (itemType === "marketplace" && !condition) {
       newErrors.condition = "Please select condition";
     }
-    
+
     if (itemType === "commission" && (!turnaroundDays || turnaroundDays < 1)) {
       newErrors.turnaroundDays = "Turnaround days must be at least 1";
     }
-    
+
     const totalImages = currentImageUrls.length + images.length;
     if (totalImages === 0) {
       newErrors.images = "At least one image is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -337,31 +353,31 @@ export default function EditItemPage() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     if (!userId) {
-      setErrors({...errors, title: "User authentication required"});
+      setErrors({ ...errors, title: "User authentication required" });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Upload any new images
       const newImageUrls = await uploadImages();
-      
+
       // Combine with existing images that weren't removed
       const combinedImageUrls = [...currentImageUrls, ...newImageUrls];
-      
+
       // Process tags - split by commas, trim whitespace, remove empty tags
       const processedTags = tags
         .split(",")
-        .map(tag => tag.trim())
-        .filter(tag => tag !== "");
-      
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== "");
+
       if (itemType === "marketplace") {
         const itemData = {
           title,
@@ -375,7 +391,7 @@ export default function EditItemPage() {
           status: MPITEM_STATUS.AVAILABLE, // Keep current status
           type: ITEM_TYPE.MARKETPLACE, // Explicitly save the item type
         };
-        
+
         await updateMPItem(itemId, itemData);
       } else {
         const itemData = {
@@ -390,26 +406,26 @@ export default function EditItemPage() {
           isAvailable: true, // Keep current availability
           type: ITEM_TYPE.COMMISSION, // Explicitly save the item type
         };
-        
+
         await updateCommItem(itemId, itemData);
       }
-      
+
       toast({
         title: "Success",
-        description: "Item updated successfully"
+        description: "Item updated successfully",
       });
-      
+
       if (isLoaded && user) {
         // Get userData again to access the andrewId
         getUserByClerkId(user.id)
-          .then(userData => {
+          .then((userData) => {
             if (userData && userData.andrewId) {
               router.push(`/dashboard`);
             } else {
               console.error("Error fetching user data:");
             }
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error fetching user data:", error);
           });
       } else {
@@ -420,50 +436,55 @@ export default function EditItemPage() {
       toast({
         title: "Error",
         description: `Failed to update ${itemType} item`,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-// Go back to shop
-const handleGoBack = () => {
-  if (isLoaded && user) {
-    // Get userData again to access the andrewId
-    getUserByClerkId(user.id)
-      .then(userData => {
-        if (userData && userData.andrewId) {
-          router.push(`/dashboard`);
-        } else {
-          console.error("Error fetching user data:");
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching user data:", error);
-      });
-  } else {
-    console.error("Error fetching user data:");
-  }
-};
+  // Go back to shop
+  const handleGoBack = () => {
+    if (isLoaded && user) {
+      // Get userData again to access the andrewId
+      getUserByClerkId(user.id)
+        .then((userData) => {
+          if (userData && userData.andrewId) {
+            router.push(`/dashboard`);
+          } else {
+            console.error("Error fetching user data:");
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching user data:", error);
+        });
+    } else {
+      console.error("Error fetching user data:");
+    }
+  };
 
   if (!isLoaded) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
-        <Loading/>
+        <Loading />
       </div>
     );
   }
 
-  if (!user) {
-    <SignIn />
+  // Show Sign In if user is not authenticated
+  if (!user && isLoaded) {
+    return (
+      <div className="flex justify-center items-center h-[80vh]">
+        <SignIn />
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <Button 
-        variant="ghost"   
-        className="mb-6 flex items-center gap-2" 
+      <Button
+        variant="ghost"
+        className="mb-6 flex items-center gap-2"
         onClick={handleGoBack}
       >
         <ArrowLeft className="h-4 w-4" />
@@ -475,7 +496,10 @@ const handleGoBack = () => {
           Edit {itemType === "marketplace" ? "Marketplace" : "Commission"} Item
         </h1>
         <p className="text-gray-600 mt-2">
-          Update your {itemType === "marketplace" ? "marketplace item" : "commission offering"}
+          Update your{" "}
+          {itemType === "marketplace"
+            ? "marketplace item"
+            : "commission offering"}
         </p>
       </div>
 
@@ -520,7 +544,8 @@ const handleGoBack = () => {
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Include details about materials, size, features, etc. (10-1000 characters)
+                  Include details about materials, size, features, etc. (10-1000
+                  characters)
                 </p>
                 {errors.description && (
                   <p className="text-sm font-medium text-red-500">
@@ -557,10 +582,7 @@ const handleGoBack = () => {
                   <label htmlFor="category" className="text-sm font-medium">
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={category} 
-                    onValueChange={setCategory}
-                  >
+                  <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -586,10 +608,7 @@ const handleGoBack = () => {
                   <label htmlFor="condition" className="text-sm font-medium">
                     Condition <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={condition} 
-                    onValueChange={setCondition}
-                  >
+                  <Select value={condition} onValueChange={setCondition}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select item condition" />
                     </SelectTrigger>
@@ -609,8 +628,12 @@ const handleGoBack = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <label htmlFor="turnaroundDays" className="text-sm font-medium">
-                    Turnaround Time (Days) <span className="text-red-500">*</span>
+                  <label
+                    htmlFor="turnaroundDays"
+                    className="text-sm font-medium"
+                  >
+                    Turnaround Time (Days){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="turnaroundDays"
@@ -638,7 +661,11 @@ const handleGoBack = () => {
                 </label>
                 <Input
                   id="tags"
-                  placeholder={itemType === "marketplace" ? "art, handmade, vintage, etc." : "portrait, character design, logo, etc."}
+                  placeholder={
+                    itemType === "marketplace"
+                      ? "art, handmade, vintage, etc."
+                      : "portrait, character design, logo, etc."
+                  }
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                 />
@@ -647,15 +674,16 @@ const handleGoBack = () => {
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={loading || imageUploading}
               >
-                {(loading || imageUploading) ? (
+                {loading || imageUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating {itemType === "marketplace" ? "Item" : "Commission"}...
+                    Updating{" "}
+                    {itemType === "marketplace" ? "Item" : "Commission"}...
                   </>
                 ) : (
                   `Update ${itemType === "marketplace" ? "Item" : "Commission"}`
@@ -670,7 +698,8 @@ const handleGoBack = () => {
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-4">Item Images</h3>
             <p className="text-sm text-gray-600 mb-4">
-              You can have up to 5 images. The first image will be used as the cover image.
+              You can have up to 5 images. The first image will be used as the
+              cover image.
             </p>
 
             {/* Current Images */}
@@ -692,11 +721,12 @@ const handleGoBack = () => {
                       >
                         <X className="h-4 w-4" />
                       </button>
-                      {index === 0 && currentImageUrls.length + images.length > 1 && (
-                        <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                          Cover
-                        </div>
-                      )}
+                      {index === 0 &&
+                        currentImageUrls.length + images.length > 1 && (
+                          <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                            Cover
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -713,7 +743,8 @@ const handleGoBack = () => {
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="h-6 w-6 text-gray-400 mb-2" />
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Click to upload</span> or drag and drop
+                    <span className="font-medium">Click to upload</span> or drag
+                    and drop
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     JPEG, PNG, or WebP (max 5MB each)

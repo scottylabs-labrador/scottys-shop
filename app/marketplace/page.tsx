@@ -5,13 +5,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
-import { 
+import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/ItemConstants";
+import {
   getMPItemsByStatus,
   getMPItemsByCategory,
   getMPItemsByPriceRange,
-  type MPItemWithId
-} from '@/firebase/mpItems';
+  type MPItemWithId,
+} from "@/firebase/mpItems";
 
 interface FilterState {
   minPrice?: number;
@@ -48,15 +48,21 @@ export default function MarketplacePage() {
         // Apply filters in order of specificity
         if (filters.category) {
           filteredItems = await getMPItemsByCategory(filters.category);
-        } else if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
-          filteredItems = await getMPItemsByPriceRange(filters.minPrice, filters.maxPrice);
+        } else if (
+          filters.minPrice !== undefined &&
+          filters.maxPrice !== undefined
+        ) {
+          filteredItems = await getMPItemsByPriceRange(
+            filters.minPrice,
+            filters.maxPrice
+          );
         } else {
           // No filters, get all available items
           filteredItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE);
         }
 
         // Apply remaining filters in memory
-        filteredItems = filteredItems.filter(item => {
+        filteredItems = filteredItems.filter((item) => {
           let matches = true;
 
           if (filters.minPrice !== undefined) {
@@ -68,7 +74,7 @@ export default function MarketplacePage() {
           if (filters.condition) {
             matches = matches && item.condition === filters.condition;
           }
-          
+
           // Ensure we only show available items
           matches = matches && item.status === MPITEM_STATUS.AVAILABLE;
 
@@ -77,7 +83,7 @@ export default function MarketplacePage() {
 
         setItems(filteredItems);
       } catch (error) {
-        console.error('Error fetching items:', error);
+        console.error("Error fetching items:", error);
         setItems([]);
       } finally {
         setLoading(false);
@@ -95,10 +101,8 @@ export default function MarketplacePage() {
       params.set("minPrice", newFilters.minPrice.toString());
     if (newFilters.maxPrice)
       params.set("maxPrice", newFilters.maxPrice.toString());
-    if (newFilters.category) 
-      params.set("category", newFilters.category);
-    if (newFilters.condition) 
-      params.set("condition", newFilters.condition);
+    if (newFilters.category) params.set("category", newFilters.category);
+    if (newFilters.condition) params.set("condition", newFilters.condition);
 
     router.push(params.toString() ? `?${params.toString()}` : "");
     setFilters(newFilters);
@@ -108,14 +112,14 @@ export default function MarketplacePage() {
 
   return (
     <div className="flex flex-col max-w-7xl mx-auto px-4 py-6">
-      <div className="pl-5">
+      <div className="mb-6">
         <ItemFilter
           onFilterChange={handleFilterChange}
           isMarketplace
           initialFilters={filters}
         />
       </div>
-      <div className="flex-1 pl-9">
+      <div className="flex-1">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {items.map((item) => (
             <ItemCard

@@ -19,13 +19,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MPITEM_STATUS, ITEM_CATEGORIES, ITEM_CONDITIONS, ITEM_TYPE } from "@/utils/constants";
+import {
+  MPITEM_STATUS,
+  ITEM_CATEGORIES,
+  ITEM_CONDITIONS,
+  ITEM_TYPE,
+} from "@/utils/ItemConstants";
 
 export default function CreateItemPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  const [itemType, setItemType] = useState<"marketplace" | "commission">("marketplace");
+  const [itemType, setItemType] = useState<"marketplace" | "commission">(
+    "marketplace"
+  );
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<File[]>([]);
@@ -41,7 +48,7 @@ export default function CreateItemPage() {
   const [condition, setCondition] = useState("");
   const [turnaroundDays, setTurnaroundDays] = useState<number>(7);
   const [tags, setTags] = useState("");
-  
+
   // Form validation errors
   const [errors, setErrors] = useState<{
     title?: string;
@@ -86,39 +93,43 @@ export default function CreateItemPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      
+
       // Check file types
-      const validFiles = newFiles.filter(file => 
-        file.type === "image/jpeg" || 
-        file.type === "image/png" || 
-        file.type === "image/webp"
+      const validFiles = newFiles.filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/webp"
       );
-      
+
       // Check if adding these would exceed the limit
       if (images.length + validFiles.length > 5) {
-        setErrors(prev => ({...prev, images: "You can upload a maximum of 5 images"}));
+        setErrors((prev) => ({
+          ...prev,
+          images: "You can upload a maximum of 5 images",
+        }));
         return;
       }
-      
-      setImages(prevImages => [...prevImages, ...validFiles]);
-      setErrors(prev => ({...prev, images: undefined}));
-      
+
+      setImages((prevImages) => [...prevImages, ...validFiles]);
+      setErrors((prev) => ({ ...prev, images: undefined }));
+
       // Generate preview URLs
-      validFiles.forEach(file => {
+      validFiles.forEach((file) => {
         const url = URL.createObjectURL(file);
-        setImageUrls(prev => [...prev, url]);
+        setImageUrls((prev) => [...prev, url]);
       });
     }
   };
 
   // Remove an image
   const removeImage = (index: number) => {
-    setImages(prevImages => {
+    setImages((prevImages) => {
       const newImages = [...prevImages];
       newImages.splice(index, 1);
       return newImages;
     });
-    setImageUrls(prevUrls => {
+    setImageUrls((prevUrls) => {
       const newUrls = [...prevUrls];
       URL.revokeObjectURL(newUrls[index]); // Clean up URL object
       newUrls.splice(index, 1);
@@ -129,15 +140,18 @@ export default function CreateItemPage() {
   // Upload images to Firebase Storage
   const uploadImages = async (): Promise<string[]> => {
     if (images.length === 0) return [];
-    
+
     setImageUploading(true);
     const uploadPromises = images.map(async (image, index) => {
-      const storageRef = ref(storage, `items/${userId}/${Date.now()}-${index}-${image.name}`);
+      const storageRef = ref(
+        storage,
+        `items/${userId}/${Date.now()}-${index}-${image.name}`
+      );
       const snapshot = await uploadBytes(storageRef, image);
       const downloadUrl = await getDownloadURL(snapshot.ref);
       return downloadUrl;
     });
-    
+
     try {
       const urls = await Promise.all(uploadPromises);
       setImageUploading(false);
@@ -152,35 +166,35 @@ export default function CreateItemPage() {
   // Validate form input
   const validateForm = () => {
     const newErrors: typeof errors = {};
-    
+
     if (!title || title.length < 3) {
       newErrors.title = "Title must be at least 3 characters";
     } else if (title.length > 100) {
       newErrors.title = "Title cannot exceed 100 characters";
     }
-    
+
     if (!description || description.length < 10) {
       newErrors.description = "Description must be at least 10 characters";
     } else if (description.length > 1000) {
       newErrors.description = "Description cannot exceed 1000 characters";
     }
-    
+
     if (!price || price <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
-    
+
     if (!category) {
       newErrors.category = "Please select a category";
     }
-    
+
     if (itemType === "marketplace" && !condition) {
       newErrors.condition = "Please select condition";
     }
-    
+
     if (itemType === "commission" && (!turnaroundDays || turnaroundDays < 1)) {
       newErrors.turnaroundDays = "Turnaround days must be at least 1";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -188,41 +202,41 @@ export default function CreateItemPage() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     if (!userId) {
-      setErrors({...errors, title: "User authentication required"});
+      setErrors({ ...errors, title: "User authentication required" });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const imageUrls = await uploadImages();
-      
+
       // Process tags - split by commas, trim whitespace, remove empty tags
       const processedTags = tags
         .split(",")
-        .map(tag => tag.trim())
-        .filter(tag => tag !== "");
-      
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== "");
+
       if (itemType === "marketplace") {
         const itemData = {
           sellerId: userId,
           title,
           description,
           price: Number(price),
-          category,
-          condition,
+          category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES],
+          condition: ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS],
           tags: processedTags,
           status: MPITEM_STATUS.AVAILABLE,
           images: imageUrls,
           createdAt: Date.now(),
         };
-        
+
         const itemId = await createMPItem(itemData);
         router.push(`/item/${ITEM_TYPE.MARKETPLACE.toLowerCase()}/${itemId}`);
       } else {
@@ -231,62 +245,52 @@ export default function CreateItemPage() {
           title,
           description,
           price: Number(price),
-          category,
+          category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES],
           tags: processedTags,
           turnaroundDays: Number(turnaroundDays),
           isAvailable: true,
           images: imageUrls,
           createdAt: Date.now(),
         };
-        
+
         const itemId = await createCommItem(itemData);
         router.push(`/item/${ITEM_TYPE.COMMISSION.toLowerCase()}/${itemId}`);
       }
     } catch (error) {
       console.error(`Error creating ${itemType} item:`, error);
-      setErrors({...errors, title: `Failed to create ${itemType} item`});
+      setErrors({ ...errors, title: `Failed to create ${itemType} item` });
     } finally {
       setLoading(false);
     }
   };
 
-// Go back to shop
-const handleGoBack = () => {
-  if (isLoaded && user) {
-    // Get userData again to access the andrewId
-    getUserByClerkId(user.id)
-      .then(userData => {
-        if (userData && userData.andrewId) {
-          router.push(`/dashboard`);
-        } else {
-          console.error("Error fetching user data:");
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching user data:", error);
-      });
-  } else {
-    console.error("Error fetching user data:");
-  }
-};
+  // Go back to shop
+  const handleGoBack = () => {
+    router.push(`/dashboard`);
+  };
 
   if (!isLoaded) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
-        <Loading/>
+        <Loading />
       </div>
     );
   }
 
-  if (!user) {
-    <SignIn />
+  // Show Sign In if user is not authenticated
+  if (!user && isLoaded) {
+    return (
+      <div className="flex justify-center items-center h-[80vh]">
+        <SignIn />
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <Button 
-        variant="ghost" 
-        className="mb-6 flex items-center gap-2" 
+      <Button
+        variant="ghost"
+        className="mb-6 flex items-center gap-2"
         onClick={handleGoBack}
       >
         <ArrowLeft className="h-4 w-4" />
@@ -295,11 +299,12 @@ const handleGoBack = () => {
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
-          Create {itemType === "marketplace" ? "Marketplace" : "Commission"} Item
+          Create {itemType === "marketplace" ? "Marketplace" : "Commission"}{" "}
+          Item
         </h1>
         <p className="text-gray-600 mt-2">
-          {itemType === "marketplace" 
-            ? "List an item for sale in your marketplace store" 
+          {itemType === "marketplace"
+            ? "List an item for sale in your marketplace store"
             : "Create a new commission offering for clients"}
         </p>
       </div>
@@ -345,7 +350,8 @@ const handleGoBack = () => {
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Include details about materials, size, features, etc. (10-1000 characters)
+                  Include details about materials, size, features, etc. (10-1000
+                  characters)
                 </p>
                 {errors.description && (
                   <p className="text-sm font-medium text-red-500">
@@ -382,17 +388,14 @@ const handleGoBack = () => {
                   <label htmlFor="category" className="text-sm font-medium">
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={category} 
-                    onValueChange={setCategory}
-                  >
+                  <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(ITEM_CATEGORIES).map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
+                      {Object.entries(ITEM_CATEGORIES).map(([key, value]) => (
+                        <SelectItem key={key} value={key}>
+                          {value}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -411,17 +414,14 @@ const handleGoBack = () => {
                   <label htmlFor="condition" className="text-sm font-medium">
                     Condition <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={condition} 
-                    onValueChange={setCondition}
-                  >
+                  <Select value={condition} onValueChange={setCondition}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select item condition" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(ITEM_CONDITIONS).map((cond) => (
-                        <SelectItem key={cond} value={cond}>
-                          {cond}
+                      {Object.entries(ITEM_CONDITIONS).map(([key, value]) => (
+                        <SelectItem key={key} value={key}>
+                          {value}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -434,8 +434,12 @@ const handleGoBack = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <label htmlFor="turnaroundDays" className="text-sm font-medium">
-                    Turnaround Time (Days) <span className="text-red-500">*</span>
+                  <label
+                    htmlFor="turnaroundDays"
+                    className="text-sm font-medium"
+                  >
+                    Turnaround Time (Days){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="turnaroundDays"
@@ -463,7 +467,11 @@ const handleGoBack = () => {
                 </label>
                 <Input
                   id="tags"
-                  placeholder={itemType === "marketplace" ? "art, handmade, vintage, etc." : "portrait, character design, logo, etc."}
+                  placeholder={
+                    itemType === "marketplace"
+                      ? "art, handmade, vintage, etc."
+                      : "portrait, character design, logo, etc."
+                  }
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                 />
@@ -472,15 +480,16 @@ const handleGoBack = () => {
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={loading || imageUploading}
               >
-                {(loading || imageUploading) ? (
+                {loading || imageUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating {itemType === "marketplace" ? "Item" : "Commission"}...
+                    Creating{" "}
+                    {itemType === "marketplace" ? "Item" : "Commission"}...
                   </>
                 ) : (
                   `Create ${itemType === "marketplace" ? "Item" : "Commission"}`
@@ -495,7 +504,8 @@ const handleGoBack = () => {
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-4">Upload Images</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Add up to 5 images of your item. The first image will be used as the cover image.
+              Add up to 5 images of your item. The first image will be used as
+              the cover image.
             </p>
 
             <div className="mb-4">
@@ -506,7 +516,8 @@ const handleGoBack = () => {
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="h-6 w-6 text-gray-400 mb-2" />
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Click to upload</span> or drag and drop
+                    <span className="font-medium">Click to upload</span> or drag
+                    and drop
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     JPEG, PNG, or WebP (max 5MB each)

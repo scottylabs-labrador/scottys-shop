@@ -1,28 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
-import { useState } from "react";
-import { ITEM_TYPE } from '@/utils/constants';
+import { BadgeAlert, XCircle, CheckCircle } from "lucide-react";
+import FavoriteButton from "@/components/items/FavoriteButton";
+import { Button } from "@/components/ui/button";
 
 interface ItemCardImageProps {
   item: any;
   itemId: string;
-  type: typeof ITEM_TYPE[keyof typeof ITEM_TYPE];
+  type: string;
   isHovered: boolean;
   isFavorited: boolean;
   isOwnedByUser: boolean;
   isItemAvailable: boolean;
-  isDashboard: boolean;
+  isDashboard?: boolean;
   isLoading: boolean;
   validImages: string[];
   onFavoriteClick: (e: React.MouseEvent) => void;
-  onToggleStatus: (e: React.MouseEvent) => void;
-  onEdit: (e: React.MouseEvent) => void;
-  onDelete: () => void;
+  onToggleStatus?: (e: React.MouseEvent) => void;
+  onEdit?: (e: React.MouseEvent) => void;
+  onDelete?: () => void;
 }
 
 export default function ItemCardImage({
@@ -33,146 +33,103 @@ export default function ItemCardImage({
   isFavorited,
   isOwnedByUser,
   isItemAvailable,
-  isDashboard,
+  isDashboard = false,
   isLoading,
   validImages,
   onFavoriteClick,
+  onToggleStatus,
+  onEdit,
+  onDelete,
 }: ItemCardImageProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // Handle image navigation
-  const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (direction === "prev") {
-      setCurrentIndex((current) =>
-        current === 0 ? validImages.length - 1 : current - 1
-      );
-    } else {
-      setCurrentIndex((current) =>
-        current === validImages.length - 1 ? 0 : current + 1
-      );
-    }
-  };
-
   return (
-    <Link href={`/item/${type.toLowerCase()}/${itemId}`}>
-      <div className="relative w-full aspect-square">
-        <Image
-          src={validImages[currentIndex] || ""}
-          alt={`${item.title} ${currentIndex + 1}`}
-          fill
-          className={cn(
-            "object-cover",
-            !isItemAvailable && "opacity-70 grayscale"
-          )}
-          priority={currentIndex === 0}
-        />
+    <div className="relative aspect-square">
+      <Link
+        href={`/item/${type.toLowerCase()}/${itemId}`}
+        className="block h-full"
+      >
+        <div className="relative w-full h-full overflow-hidden">
+          <Image
+            src={validImages[0]}
+            alt={item.title}
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 50vw, 33vw"
+          />
 
-        {/* Status badge for dashboard view */}
-        {isDashboard && (
-          <div className={cn(
-            "absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium",
-            isItemAvailable 
-              ? "bg-green-500 text-white"
-              : "bg-gray-500 text-white"
-          )}>
-            {isItemAvailable ? "Active" : "Inactive"}
-          </div>
-        )}
-
-        {/* Navigation arrows - shown on hover */}
-        {validImages.length > 1 && isHovered && (
-          <>
-            <button
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center transition-opacity duration-200"
-              onClick={(e) => handleImageNav(e, "prev")}
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-700" />
-            </button>
-            <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center transition-opacity duration-200"
-              onClick={(e) => handleImageNav(e, "next")}
-            >
-              <ChevronRight className="w-5 h-5 text-gray-700" />
-            </button>
-          </>
-        )}
-
-        {/* Dashboard actions or normal favorite button */}
-        {isDashboard ? (
-          <div/>
-        ) : (
-          // Non-dashboard view - show ownership indicator or favorite button
-          <>
-            {isOwnedByUser ? (
-              <div
-                className={cn(
-                  "absolute top-3 right-3 px-2 py-1 rounded-md bg-black/75 text-white text-xs font-medium transition-all duration-200",
-                  isHovered ? "opacity-100" : "opacity-0"
-                )}
-              >
-                Your Item
+          {/* Status Indicator */}
+          {!isItemAvailable && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="bg-white/90 px-3 py-2 rounded-full flex items-center gap-2">
+                <BadgeAlert className="w-4 h-4 text-red-500" />
+                <span className="text-xs font-medium">Unavailable</span>
               </div>
-            ) : (
-              <>
-                <SignedIn>
-                  <button
-                    className={cn(
-                      "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
-                      isFavorited ? "opacity-100" : isHovered ? "opacity-80" : "opacity-0"
-                    )}
-                    onClick={onFavoriteClick}
-                    disabled={isLoading}
-                  >
-                    <Heart className={cn("w-5 h-5", isFavorited && "fill-rose-500 text-rose-500")} />
-                  </button>
-                </SignedIn>
-                <SignedOut>
-                  <SignInButton>
-                    <button
-                      className={cn(
-                        "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200 hover:bg-gray-200",
-                        isHovered ? "opacity-80" : "opacity-0"
-                      )}
-                    >
-                      <Heart className="w-5 h-5" />
-                    </button>
-                  </SignInButton>
-                </SignedOut>
-              </>
-            )}
-          </>
-        )}
+            </div>
+          )}
 
-        {/* Image pagination dots */}
-        {validImages.length > 1 && (
-          <div
-            className={cn(
-              "absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 transition-opacity duration-200",
-              isHovered ? "opacity-100" : "opacity-0"
-            )}
-          >
-            {validImages.map((_, index) => (
-              <button
-                key={index}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full transition-all",
-                  index === currentIndex
-                    ? "bg-white w-3"
-                    : "bg-white/60 hover:bg-white/80"
-                )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCurrentIndex(index);
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </Link>
+          {/* Dashboard status toggle button */}
+          {isDashboard && isOwnedByUser && onToggleStatus && (
+            <Button
+              className={cn(
+                "absolute bottom-2 left-1/2 -translate-x-1/2 text-xs py-1 px-3 h-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+                isItemAvailable
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-green-600 hover:bg-green-700"
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onToggleStatus) onToggleStatus(e);
+              }}
+              disabled={isLoading}
+            >
+              {isItemAvailable ? (
+                <>
+                  <XCircle className="w-3 h-3 mr-1" /> Mark Unavailable
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-3 h-3 mr-1" /> Mark Available
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </Link>
+
+      {/* Favorite Button - Moved outside of Link to prevent event conflicts */}
+      {!isOwnedByUser && (
+        <div
+          className={cn(
+            "absolute top-2 right-2 z-10 transition-opacity duration-200",
+            isFavorited
+              ? "opacity-100"
+              : isHovered
+                ? "opacity-100"
+                : "opacity-0"
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <FavoriteButton
+            isFavorited={isFavorited}
+            isLoading={isLoading}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onFavoriteClick(e);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Item owner indicator */}
+      {isOwnedByUser && !isDashboard && (
+        <div className="absolute top-2 right-2 bg-black/75 text-white px-2 py-1 text-xs font-medium rounded-md">
+          Your Item
+        </div>
+      )}
+    </div>
   );
 }

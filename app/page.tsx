@@ -3,15 +3,12 @@
 import { useState, useEffect } from "react";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
-import { 
-  getMPItemsByStatus,
-  type MPItemWithId
-} from '@/firebase/mpItems';
-import { 
-    getAvailableCommItems,
-    type CommItemWithId
-  } from '@/firebase/commItems';
+import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/ItemConstants";
+import { getMPItemsByStatus, type MPItemWithId } from "@/firebase/mpItems";
+import {
+  getAvailableCommItems,
+  type CommItemWithId,
+} from "@/firebase/commItems";
 
 export default function Home() {
   const [mpItems, setMPItems] = useState<MPItemWithId[]>([]);
@@ -21,32 +18,40 @@ export default function Home() {
   const [randomCommIndex, setRandomCommIndex] = useState(0);
 
   useEffect(() => {
-      const fetchItems = async () => {
-          setLoading(true);
-          try {
-              let MPItems: MPItemWithId[] = [];
-              let CommItems: CommItemWithId[] = [];
+    const fetchItems = async () => {
+      setLoading(true);
+      try {
+        let MPItems: MPItemWithId[] = [];
+        let CommItems: CommItemWithId[] = [];
 
-              MPItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE);  // determine how we want to handle this
-              CommItems = await getAvailableCommItems();
-              
-              setMPItems(MPItems);
-              setCommItems(CommItems);
-          } catch (error) {
-              console.error('Error fetching items:', error);
-              setMPItems([]);
-              setCommItems([]);
-          } finally {
-              setLoading(false);
-          }
-      };
-      fetchItems();
-  }, []);  
+        MPItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE); // determine how we want to handle this
+        CommItems = await getAvailableCommItems();
+
+        setMPItems(MPItems);
+        setCommItems(CommItems);
+      } catch (error) {
+        console.error("Error fetching items:", error);
+        setMPItems([]);
+        setCommItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
+  }, []);
 
   // Generate random featured items on refresh
   useEffect(() => {
-    setRandomMPIndex(mpItems && mpItems.length > 0 ? Math.floor(Math.random() * mpItems.length) : 0);
-    setRandomCommIndex(commItems && commItems.length > 0 ? Math.floor(Math.random() * commItems.length) : 0);
+    setRandomMPIndex(
+      mpItems && mpItems.length > 0
+        ? Math.floor(Math.random() * mpItems.length)
+        : 0
+    );
+    setRandomCommIndex(
+      commItems && commItems.length > 0
+        ? Math.floor(Math.random() * commItems.length)
+        : 0
+    );
   }, [mpItems, commItems]);
 
   if (loading) return <Loading />;
@@ -57,7 +62,7 @@ export default function Home() {
         <h1 className="text-5xl font-caladea mb-6">
           Welcome to Scotty&apos;s Shop!
         </h1>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div className="max-w-sm rounded overflow-hidden shadow-lg">
             <div className="px-6 py-4">
@@ -89,7 +94,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
       </main>
     </div>
   );

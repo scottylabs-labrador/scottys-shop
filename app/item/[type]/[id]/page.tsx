@@ -2,46 +2,44 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Clock,
   ChevronUp,
   ChevronDown,
-  Heart,
   ChevronRight,
-  ShoppingCart,
+  MessageSquare,
 } from "lucide-react";
+import FavoriteButton from "@/components/items/FavoriteButton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  MPITEM_STATUS, 
-  ITEM_TYPE,
-  ITEM_CONDITIONS
-} from "@/utils/constants";
-import { 
-  getCommItemById,
-  type CommItemWithId 
-} from "@/firebase/commItems";
-import { 
-  getMPItemById,
-  type MPItemWithId 
-} from "@/firebase/mpItems";
+import { MPITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
+import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
+import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
 import {
   getUserById,
   getUserByClerkId,
   addToFavorites,
   removeFromFavorites,
-  addToCart,
-  removeFromCart,
-  isItemInCart,
-  type UserWithId
+  type UserWithId,
 } from "@/firebase/users";
+import {
+  createItemPurchaseConversation,
+  findConversationByParticipantsAndItem,
+  getItemPurchaseMessageTemplate,
+} from "@/firebase/conversations";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
+
+// Import badge components
+import {
+  StatusBadge,
+  TypeBadge,
+  ConditionBadge,
+  TurnaroundBadge,
+} from "@/components/items/ItemBadges";
 
 const DEFAULT_AVATAR = "/assets/default-avatar.png";
 
@@ -51,15 +49,18 @@ export default function ItemPage() {
   const params = useParams<{ type: string; id: string }>();
   const { isSignedIn, user } = useUser();
   const { toast } = useToast();
-  
+  const router = useRouter();
+
   // Core state
   const [item, setItem] = useState<ItemType | null>(null);
   const [seller, setSeller] = useState<UserWithId | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
-  const [isInCart, setIsInCart] = useState(false);
   const [userFirebaseId, setUserFirebaseId] = useState<string | null>(null);
   const [isOwnedByUser, setIsOwnedByUser] = useState(false);
-  
+  const [existingConversationId, setExistingConversationId] = useState<
+    string | null
+  >(null);
+
   // UI state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUpArrow, setShowUpArrow] = useState(false);
@@ -67,12 +68,13 @@ export default function ItemPage() {
   const [isMainImageHovered, setIsMainImageHovered] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
   const isCommissionType = params.type === ITEM_TYPE.COMMISSION.toLowerCase();
-  const isValidType = params.type === ITEM_TYPE.COMMISSION.toLowerCase() || params.type === ITEM_TYPE.MARKETPLACE.toLowerCase();
-
+  const isValidType =
+    params.type === ITEM_TYPE.COMMISSION.toLowerCase() ||
+    params.type === ITEM_TYPE.MARKETPLACE.toLowerCase();
 
   // Get user's Firestore ID from Clerk ID
   useEffect(() => {
@@ -82,10 +84,12 @@ export default function ItemPage() {
           const userData = await getUserByClerkId(user.id);
           if (userData) {
             setUserFirebaseId(userData.id);
-            
+
             // Build favorite item ID
             const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
-            setIsFavorited(userData.favorites?.includes(favoriteItemId) || false);
+            setIsFavorited(
+              userData.favorites?.includes(favoriteItemId) || false
+            );
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -109,7 +113,7 @@ export default function ItemPage() {
           toast({
             title: "Error",
             description: "Item not found",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
@@ -121,32 +125,55 @@ export default function ItemPage() {
         if (fetchedSeller) {
           setSeller(fetchedSeller);
           setAvatarUrl(fetchedSeller.avatarUrl || DEFAULT_AVATAR);
-          
+
           // Check if the current user is the seller
           if (userFirebaseId && fetchedSeller.id === userFirebaseId) {
             setIsOwnedByUser(true);
           }
         }
 
-        // Check if item is in cart
-        if (isSignedIn && user?.id) {
-          const inCart = await isItemInCart(user.id, params.id);
-          setIsInCart(inCart);
+        // Check if conversation already exists for this item
+        if (
+          isSignedIn &&
+          userFirebaseId &&
+          fetchedSeller &&
+          userFirebaseId !== fetchedSeller.id
+        ) {
+          try {
+            const conversation = await findConversationByParticipantsAndItem(
+              userFirebaseId,
+              fetchedSeller.id,
+              params.id
+            );
+
+            if (conversation) {
+              setExistingConversationId(conversation.id);
+            }
+          } catch (error) {
+            console.error("Error checking for existing conversation:", error);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
           title: "Error",
           description: "Failed to load item data",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     };
 
-    if (isValidType && params.id) {
+    if (isValidType && params.id && userFirebaseId) {
       fetchData();
     }
-  }, [isCommissionType, params.id, isSignedIn, user?.id, isValidType, toast, userFirebaseId]);
+  }, [
+    isCommissionType,
+    params.id,
+    isSignedIn,
+    isValidType,
+    toast,
+    userFirebaseId,
+  ]);
 
   // Handle thumbnail navigation
   useEffect(() => {
@@ -155,7 +182,8 @@ export default function ItemPage() {
       if (container) {
         setShowUpArrow(container.scrollTop > 0);
         setShowDownArrow(
-          container.scrollTop < container.scrollHeight - container.clientHeight - 1
+          container.scrollTop <
+            container.scrollHeight - container.clientHeight - 1
         );
       }
     };
@@ -187,11 +215,11 @@ export default function ItemPage() {
     if (!item?.images.length) return;
 
     if (direction === "prev") {
-      setCurrentIndex(current => 
+      setCurrentIndex((current) =>
         current === 0 ? item.images.length - 1 : current - 1
       );
     } else {
-      setCurrentIndex(current => 
+      setCurrentIndex((current) =>
         current === item.images.length - 1 ? 0 : current + 1
       );
     }
@@ -205,13 +233,13 @@ export default function ItemPage() {
       toast({
         title: "Authentication required",
         description: "Please sign in to add items to favorites",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
-    
+
     try {
       setIsLoading(true);
       if (isFavorited) {
@@ -219,14 +247,14 @@ export default function ItemPage() {
         setIsFavorited(false);
         toast({
           title: "Success",
-          description: "Removed from favorites"
+          description: "Removed from favorites",
         });
       } else {
         await addToFavorites(userFirebaseId, favoriteItemId);
         setIsFavorited(true);
         toast({
           title: "Success",
-          description: "Added to favorites"
+          description: "Added to favorites",
         });
       }
     } catch (error) {
@@ -234,66 +262,75 @@ export default function ItemPage() {
       toast({
         title: "Error",
         description: "Failed to update favorites",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCartAction = async () => {
-    if (!isSignedIn || !userFirebaseId || !item) {
+  const handleRequestToBuy = async () => {
+    if (!isSignedIn || !userFirebaseId || !item || !seller) {
       toast({
         title: "Authentication required",
-        description: "Please sign in to add items to cart",
-        variant: "destructive"
+        description: "Please sign in to message the seller",
+        variant: "destructive",
       });
+      return;
+    }
+
+    // If the user already has a conversation about this item, navigate to it
+    if (existingConversationId) {
+      router.push(`/messages/conversation/${existingConversationId}`);
       return;
     }
 
     setIsLoading(true);
     try {
-      if (isInCart) {
-        await removeFromCart(userFirebaseId, params.id);
-        setIsInCart(false);
-        toast({
-          title: "Success",
-          description: "Removed from cart"
-        });
-      } else {
-        await addToCart(userFirebaseId, params.id);
-        setIsInCart(true);
-        toast({
-          title: "Success",
-          description: "Added to cart"
-        });
-      }
+      // Create template message based on item availability
+      const initialMessage = canPurchase
+        ? getItemPurchaseMessageTemplate(
+            item.title,
+            isCommissionType ? "commission" : "marketplace",
+            item.price
+          )
+        : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
+
+      // Create a new conversation with initial message
+      const conversationId = await createItemPurchaseConversation(
+        userFirebaseId,
+        seller.id,
+        params.id,
+        isCommissionType ? "commission" : "marketplace",
+        item.title,
+        initialMessage
+      );
+
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent to the seller",
+      });
+
+      // Navigate to the conversation
+      router.push(`/messages/conversation/${conversationId}`);
     } catch (error) {
-      console.error("Error updating cart:", error);
+      console.error("Error creating conversation:", error);
       toast({
         title: "Error",
-        description: "Failed to update cart",
-        variant: "destructive"
+        description: "Failed to send message",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Helper function to get condition display text from the constant
-  const getConditionText = (conditionKey: string): string => {
-    // Find matching display text in ITEM_CONDITIONS
-    const conditionEntry = Object.entries(ITEM_CONDITIONS).find(
-      ([key, _]) => key === conditionKey
-    );
-    
-    return conditionEntry ? conditionEntry[1] : 'Unknown';
-  };
-
   if (!isValidType) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <h2 className="text-2xl font-semibold">Invalid item type: {params.type}</h2>
+        <h2 className="text-2xl font-semibold">
+          Invalid item type: {params.type}
+        </h2>
       </div>
     );
   }
@@ -301,20 +338,22 @@ export default function ItemPage() {
   if (!item || !seller) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <Loading/>
+        <Loading />
       </div>
     );
   }
 
-  const validImages = item.images.filter(url => url && url.trim() !== "");
-  const isAvailable = isCommissionType 
-    ? (item as CommItemWithId).isAvailable 
+  const validImages = item.images.filter((url) => url && url.trim() !== "");
+  const isAvailable = isCommissionType
+    ? (item as CommItemWithId).isAvailable
     : (item as MPItemWithId).status === MPITEM_STATUS.AVAILABLE;
 
+  // Get the status string consistently
   const statusText = isCommissionType
-    ? (item as CommItemWithId).isAvailable ? "Available" : "Unavailable"
-    : (item as MPItemWithId).status.charAt(0).toUpperCase() + 
-      (item as MPItemWithId).status.slice(1);
+    ? (item as CommItemWithId).isAvailable
+      ? MPITEM_STATUS.AVAILABLE
+      : "Unavailable"
+    : (item as MPItemWithId).status;
 
   const canPurchase = isAvailable;
 
@@ -408,23 +447,23 @@ export default function ItemPage() {
 
               {/* Favorite Button - Hidden if user owns the item */}
               {!isOwnedByUser ? (
-                <button
+                <div
                   className={cn(
-                    "absolute top-3 right-3 p-2 rounded-full bg-white shadow-md transition-all duration-200",
-                    isFavorited ? "opacity-100" : isMainImageHovered ? "opacity-80" : "opacity-0",
-                    "hover:bg-gray-200"
+                    "absolute top-3 right-3 transition-opacity duration-200",
+                    isFavorited
+                      ? "opacity-100"
+                      : isMainImageHovered
+                        ? "opacity-80"
+                        : "opacity-0"
                   )}
-                  onClick={handleFavoriteClick}
-                  disabled={isLoading}
-                  title={isOwnedByUser ? "You can't favorite your own item" : (isFavorited ? "Remove from favorites" : "Add to favorites")}
                 >
-                  <Heart 
-                    className={cn(
-                      "w-5 h-5",
-                      isFavorited && "fill-rose-500 text-rose-500"
-                    )} 
+                  <FavoriteButton
+                    isFavorited={isFavorited}
+                    isLoading={isLoading}
+                    onClick={handleFavoriteClick}
+                    className="p-3" // Slightly larger button for the item page
                   />
-                </button>
+                </div>
               ) : (
                 <div
                   className={cn(
@@ -468,20 +507,18 @@ export default function ItemPage() {
             <div className="space-y-1">
               <div className="flex justify-between items-start">
                 <h1 className="text-3xl font-semibold">{item.title}</h1>
-                <Badge variant={canPurchase ? "default" : "secondary"}>
-                  {statusText}
-                </Badge>
+                <StatusBadge status={statusText} />
               </div>
               <div className="flex items-center gap-2 text-sm font-semibold">
+                {/* Condition or turnaround time badge */}
                 {isCommissionType ? (
-                  <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-green-700">
-                    <Clock className="h-4 w-4" />
-                    <span>{(item as CommItemWithId).turnaroundDays}d</span>
-                  </div>
+                  <TurnaroundBadge
+                    days={(item as CommItemWithId).turnaroundDays}
+                  />
                 ) : (
-                  <span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
-                    {getConditionText((item as MPItemWithId).condition)}
-                  </span>
+                  <ConditionBadge
+                    condition={(item as MPItemWithId).condition}
+                  />
                 )}
               </div>
             </div>
@@ -502,36 +539,81 @@ export default function ItemPage() {
                       Edit Item
                     </Button>
                   </Link>
-                ) : (
+                ) : existingConversationId ? (
+                  // Direct navigation to existing conversation
                   <Button
-                    onClick={handleCartAction}
-                    className={cn(
-                      "w-full font-bold",
-                      isInCart
-                        ? "bg-gray-400 hover:bg-slate-500"
-                        : "bg-black hover:bg-gray-800"
-                    )}
+                    onClick={() =>
+                      router.push(
+                        `/messages/conversation/${existingConversationId}`
+                      )
+                    }
+                    className="w-full font-bold bg-blue-600 hover:bg-blue-700"
+                    size="lg"
+                  >
+                    <MessageSquare className="w-5 h-5 mr-2" />
+                    View Conversation
+                  </Button>
+                ) : (
+                  // Creating a new conversation
+                  <Button
+                    onClick={async () => {
+                      if (!isSignedIn || !userFirebaseId || !item || !seller) {
+                        toast({
+                          title: "Authentication required",
+                          description: "Please sign in to message the seller",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      setIsLoading(true);
+                      try {
+                        // Create template message based on item availability
+                        const initialMessage = canPurchase
+                          ? getItemPurchaseMessageTemplate(
+                              item.title,
+                              isCommissionType ? "commission" : "marketplace",
+                              item.price
+                            )
+                          : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
+
+                        // Create a new conversation with initial message
+                        const conversationId =
+                          await createItemPurchaseConversation(
+                            userFirebaseId,
+                            seller.id,
+                            params.id,
+                            isCommissionType ? "commission" : "marketplace",
+                            item.title,
+                            initialMessage
+                          );
+
+                        toast({
+                          title: "Message sent",
+                          description:
+                            "Your message has been sent to the seller",
+                        });
+
+                        // Navigate to the conversation
+                        router.push(`/messages/conversation/${conversationId}`);
+                      } catch (error) {
+                        console.error("Error creating conversation:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to send message",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    className="w-full font-bold bg-black hover:bg-gray-800"
                     size="lg"
                     disabled={!canPurchase || isLoading}
                   >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    {isLoading 
-                      ? "Processing..." 
-                      : isInCart 
-                        ? "Remove from Cart" 
-                        : "Add to Cart"}
+                    <MessageSquare className="w-5 h-5 mr-2" />
+                    {isLoading ? "Processing..." : "Message Seller"}
                   </Button>
-                )}
-                
-                {!isOwnedByUser && (
-                  <Link href={`/messages/${seller.id}`}>
-                    <Button
-                      className="w-full font-bold text-black bg-white border-2 border-black hover:bg-gray-200"
-                      size="lg"
-                    >
-                      Message Seller
-                    </Button>
-                  </Link>
                 )}
               </div>
             </div>
@@ -540,8 +622,10 @@ export default function ItemPage() {
             <Link href={`/shop/${seller.andrewId}`}>
               <div className="flex items-center gap-3 pt-3 px-2 group">
                 <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-black">
-                  <AvatarImage src={avatarUrl || DEFAULT_AVATAR}
-                               className="object-cover" />
+                  <AvatarImage
+                    src={avatarUrl || DEFAULT_AVATAR}
+                    className="object-cover"
+                  />
                   <AvatarFallback>{seller.name[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

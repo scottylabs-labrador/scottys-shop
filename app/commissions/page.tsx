@@ -5,14 +5,14 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE } from '@/utils/constants';
-import { 
+import { ITEM_TYPE } from "@/utils/ItemConstants";
+import {
   getAvailableCommItems,
   getCommItemsByCategory,
   getCommItemsByPriceRange,
   getCommItemsByTurnaroundTime,
-  type CommItemWithId
-} from '@/firebase/commItems';
+  type CommItemWithId,
+} from "@/firebase/commItems";
 
 interface FilterState {
   minPrice?: number;
@@ -55,17 +55,25 @@ export default function CommissionsPage() {
         // Apply filters in order of specificity
         if (filters.category) {
           filteredItems = await getCommItemsByCategory(filters.category);
-        } else if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
-          filteredItems = await getCommItemsByPriceRange(filters.minPrice, filters.maxPrice);
+        } else if (
+          filters.minPrice !== undefined &&
+          filters.maxPrice !== undefined
+        ) {
+          filteredItems = await getCommItemsByPriceRange(
+            filters.minPrice,
+            filters.maxPrice
+          );
         } else if (filters.maxTurnaroundDays) {
-          filteredItems = await getCommItemsByTurnaroundTime(filters.maxTurnaroundDays);
+          filteredItems = await getCommItemsByTurnaroundTime(
+            filters.maxTurnaroundDays
+          );
         } else {
           // No filters, get all available items
           filteredItems = await getAvailableCommItems();
         }
 
         // Apply remaining filters in memory
-        filteredItems = filteredItems.filter(item => {
+        filteredItems = filteredItems.filter((item) => {
           let matches = true;
 
           if (filters.minPrice !== undefined) {
@@ -75,7 +83,8 @@ export default function CommissionsPage() {
             matches = matches && item.price <= filters.maxPrice;
           }
           if (filters.maxTurnaroundDays !== undefined) {
-            matches = matches && item.turnaroundDays <= filters.maxTurnaroundDays;
+            matches =
+              matches && item.turnaroundDays <= filters.maxTurnaroundDays;
           }
 
           return matches;
@@ -83,7 +92,7 @@ export default function CommissionsPage() {
 
         setItems(filteredItems);
       } catch (error) {
-        console.error('Error fetching items:', error);
+        console.error("Error fetching items:", error);
         setItems([]);
       } finally {
         setLoading(false);
@@ -101,8 +110,7 @@ export default function CommissionsPage() {
       params.set("minPrice", newFilters.minPrice.toString());
     if (newFilters.maxPrice)
       params.set("maxPrice", newFilters.maxPrice.toString());
-    if (newFilters.category) 
-      params.set("category", newFilters.category);
+    if (newFilters.category) params.set("category", newFilters.category);
     if (newFilters.maxTurnaroundDays) {
       params.set("maxTurnaroundDays", newFilters.maxTurnaroundDays.toString());
     }
@@ -116,14 +124,14 @@ export default function CommissionsPage() {
 
   return (
     <div className="flex flex-col max-w-7xl mx-auto px-4 py-6">
-      <div className="pl-5">
+      <div className="mb-6">
         <ItemFilter
           onFilterChange={handleFilterChange}
-          isMarketplace
+          isMarketplace={false}
           initialFilters={filters}
         />
       </div>
-      <div className="flex-1 pl-9">
+      <div className="flex-1">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {items.map((item) => (
             <ItemCard

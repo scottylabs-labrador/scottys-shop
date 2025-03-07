@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ITEM_TYPE, MPITEM_STATUS } from '@/utils/constants';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
@@ -13,21 +12,24 @@ import ItemCardActions from "./ItemCardActions";
 import DeleteItemDialog from "./DeleteItemDialog";
 
 // Import Firebase functions
-import { 
+import {
   getUserByClerkId,
-  addToFavorites, 
-  removeFromFavorites 
-} from '@/firebase/users';
-import { 
-  getMPItemById, 
-  deleteMPItem, 
-  updateMPItemStatus 
-} from '@/firebase/mpItems';
-import { 
-  getCommItemById, 
-  deleteCommItem, 
-  updateCommItemAvailability 
-} from '@/firebase/commItems';
+  addToFavorites,
+  removeFromFavorites,
+} from "@/firebase/users";
+import {
+  getMPItemById,
+  deleteMPItem,
+  updateMPItemStatus,
+} from "@/firebase/mpItems";
+import {
+  getCommItemById,
+  deleteCommItem,
+  updateCommItemAvailability,
+} from "@/firebase/commItems";
+
+// Import constants
+import { MPITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
 
 // Define interfaces based on Firebase data models
 interface BaseItem {
@@ -40,7 +42,7 @@ interface BaseItem {
 
 interface MPItem extends BaseItem {
   condition: string;
-  status: typeof MPITEM_STATUS[keyof typeof MPITEM_STATUS];
+  status: string;
 }
 
 interface CommItem extends BaseItem {
@@ -48,20 +50,18 @@ interface CommItem extends BaseItem {
   isAvailable: boolean;
 }
 
-type ItemType = typeof ITEM_TYPE[keyof typeof ITEM_TYPE];
-
 interface ItemCardProps {
   itemId: string;
-  type: ItemType;
+  type: "Commission" | "Marketplace";
   isDashboard?: boolean;
   onItemDeleted?: () => void;
 }
 
-export default function ItemCard({ 
-  itemId, 
-  type, 
+export default function ItemCard({
+  itemId,
+  type,
   isDashboard = false,
-  onItemDeleted
+  onItemDeleted,
 }: ItemCardProps) {
   // State
   const [item, setItem] = useState<MPItem | CommItem | null>(null);
@@ -77,8 +77,11 @@ export default function ItemCard({
   const { toast } = useToast();
   const { user } = useUser();
 
+  // Determine if this is a commission item
+  const isCommissionItem = type === ITEM_TYPE.COMMISSION;
+
   // Create favorite item ID with type prefix
-  const typePrefix = type === ITEM_TYPE.COMMISSION ? "comm" : "mp";
+  const typePrefix = isCommissionItem ? "comm" : "mp";
   const favoriteItemId = `${typePrefix}_${itemId}`;
 
   // Fetch user data and check if item is favorited
@@ -89,20 +92,21 @@ export default function ItemCard({
           const userData = await getUserByClerkId(user.id);
           if (userData) {
             setUserId(userData.id);
-            
+
             // Check if the item is in favorites
-            const isItemFavorited = userData.favorites && 
-              Array.isArray(userData.favorites) && 
+            const isItemFavorited =
+              userData.favorites &&
+              Array.isArray(userData.favorites) &&
               userData.favorites.includes(favoriteItemId);
-              
+
             setIsFavorited(!!isItemFavorited);
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error("Error fetching user data:", error);
         }
       }
     };
-    
+
     fetchUser();
   }, [user?.id, favoriteItemId]);
 
@@ -110,30 +114,30 @@ export default function ItemCard({
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const fetchedItem = type === ITEM_TYPE.COMMISSION
+        const fetchedItem = isCommissionItem
           ? await getCommItemById(itemId)
           : await getMPItemById(itemId);
-        
+
         setItem(fetchedItem);
-        
+
         // Check if user owns this item
         if (fetchedItem && userId && fetchedItem.sellerId === userId) {
           setIsOwnedByUser(true);
         }
       } catch (error) {
-        console.error('Error fetching item:', error);
+        console.error("Error fetching item:", error);
       }
     };
-    
+
     fetchItem();
-  }, [itemId, type, userId]);
+  }, [itemId, type, userId, isCommissionItem]);
 
   if (!item || !item.images || item.images.length === 0) {
     return null;
   }
 
   // Filter out empty image URLs
-  const validImages = item.images.filter(url => url && url.trim() !== "");
+  const validImages = item.images.filter((url) => url && url.trim() !== "");
   if (validImages.length === 0) return null;
 
   // Handle favoriting/unfavoriting
@@ -156,14 +160,14 @@ export default function ItemCard({
         setIsFavorited(false);
         toast({
           title: "Success",
-          description: "Removed from favorites"
+          description: "Removed from favorites",
         });
       } else {
         await addToFavorites(userId, favoriteItemId);
         setIsFavorited(true);
         toast({
           title: "Success",
-          description: "Added to favorites"
+          description: "Added to favorites",
         });
       }
     } catch (error) {
@@ -171,7 +175,7 @@ export default function ItemCard({
       toast({
         title: "Error",
         description: "Failed to update favorites",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -189,17 +193,17 @@ export default function ItemCard({
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      if (type === ITEM_TYPE.COMMISSION) {
+      if (isCommissionItem) {
         await deleteCommItem(itemId);
       } else {
         await deleteMPItem(itemId);
       }
-      
+
       toast({
         title: "Success",
-        description: "Item deleted successfully"
+        description: "Item deleted successfully",
       });
-      
+
       if (onItemDeleted) {
         onItemDeleted();
       } else {
@@ -210,7 +214,7 @@ export default function ItemCard({
       toast({
         title: "Error",
         description: "Failed to delete item",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -222,38 +226,37 @@ export default function ItemCard({
   const handleToggleStatus = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setIsLoading(true);
     try {
-      const isCommissionItem = 'turnaroundDays' in item;
-      
       if (isCommissionItem) {
         const commItem = item as CommItem;
         await updateCommItemAvailability(itemId, !commItem.isAvailable);
         setItem({
           ...commItem,
-          isAvailable: !commItem.isAvailable
+          isAvailable: !commItem.isAvailable,
         } as CommItem);
-        
+
         toast({
           title: "Success",
-          description: `Commission is now ${!commItem.isAvailable ? 'available' : 'unavailable'}`
+          description: `Commission is now ${!commItem.isAvailable ? "available" : "unavailable"}`,
         });
       } else {
         const mpItem = item as MPItem;
-        const newStatus = mpItem.status === MPITEM_STATUS.AVAILABLE 
-          ? MPITEM_STATUS.PENDING 
-          : MPITEM_STATUS.AVAILABLE;
-          
+        const newStatus =
+          mpItem.status === MPITEM_STATUS.AVAILABLE
+            ? MPITEM_STATUS.PENDING
+            : MPITEM_STATUS.AVAILABLE;
+
         await updateMPItemStatus(itemId, newStatus);
         setItem({
           ...mpItem,
-          status: newStatus
+          status: newStatus,
         } as MPItem);
-        
+
         toast({
           title: "Success",
-          description: `Item is now ${newStatus.toLowerCase()}`
+          description: `Item is now ${newStatus.toLowerCase()}`,
         });
       }
     } catch (error) {
@@ -261,30 +264,27 @@ export default function ItemCard({
       toast({
         title: "Error",
         description: "Failed to update item status",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isCommissionItem = (item: MPItem | CommItem): item is CommItem => {
-    return 'turnaroundDays' in item;
-  };
-
-  const isItemAvailable = isCommissionItem(item) 
-    ? item.isAvailable 
-    : item.status === MPITEM_STATUS.AVAILABLE;
+  // Check if the item is available
+  const isItemAvailable = isCommissionItem
+    ? (item as CommItem).isAvailable
+    : (item as MPItem).status === MPITEM_STATUS.AVAILABLE;
 
   return (
     <>
       <div
-        className="group font-rubik shadow-sm relative w-full max-w-[300px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+        className="group font-rubik shadow-md relative w-full max-w-[300px] bg-white rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image component */}
-        <ItemCardImage 
+        <ItemCardImage
           item={item}
           itemId={itemId}
           type={type}
@@ -301,16 +301,12 @@ export default function ItemCard({
           onDelete={() => setIsDeleteDialogOpen(true)}
         />
 
-        {/* Item details component */}
-        <ItemCardDetails 
-          item={item}
-          itemId={itemId}
-          type={type}
-        />
+        {/* Item details component - using the existing component */}
+        <ItemCardDetails item={item} itemId={itemId} type={type} />
 
         {/* Dashboard quick action buttons */}
         {isDashboard && (
-          <ItemCardActions 
+          <ItemCardActions
             onEdit={handleEdit}
             onDelete={() => setIsDeleteDialogOpen(true)}
           />
@@ -318,7 +314,7 @@ export default function ItemCard({
       </div>
 
       {/* Delete confirmation dialog */}
-      <DeleteItemDialog 
+      <DeleteItemDialog
         isOpen={isDeleteDialogOpen}
         isLoading={isLoading}
         onClose={() => setIsDeleteDialogOpen(false)}
