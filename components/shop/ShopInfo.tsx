@@ -82,7 +82,7 @@ const ShopInfo = ({
           <Button
             type="submit"
             disabled={isSaving}
-            className="bg-black hover:bg-gray-800 text-white border-2 border-black"
+            className="bg-black hover:bg-gray-800 text-white border-2 border-black font-bold"
           >
             <Check className="w-4 h-4 mr-2" />
             {isSaving ? "Saving..." : "Save Changes"}
@@ -91,7 +91,7 @@ const ShopInfo = ({
             type="button"
             variant="outline"
             onClick={handleCancel}
-            className="hover:bg-gray-100 border-2 border-gray-300"
+            className="hover:bg-gray-100 border-2 border-gray-300 font-bold"
           >
             <X className="w-4 h-4 mr-2" />
             Cancel
