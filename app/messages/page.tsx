@@ -2,13 +2,16 @@
 
 import { useUser, SignIn } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import {
   getConversationsByUserId,
   type ConversationWithId,
 } from "@/firebase/conversations";
+import {
+  CONVERSATION_STATUS,
+  statusColors,
+  statusDisplayNames,
+} from "@/utils/ConversationConstants";
 import {
   getUserByClerkId,
   getUserById,
@@ -18,18 +21,10 @@ import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
 import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
-import {
-  Tag,
-  MessageSquare,
-  Clock,
-  ShoppingCart,
-  LayoutDashboardIcon,
-  Inbox,
-} from "lucide-react";
+import { Inbox, Info, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const DEFAULT_AVATAR = "/assets/default-avatar.png";
-const DEFAULT_ITEM_IMAGE = "/assets/default-item.png";
+import { Card } from "@/components/ui/card";
+import ConversationPreview from "@/components/conversations/ConversationPreview";
 
 // Type for combined item data with type information
 type ItemWithType = (MPItemWithId | CommItemWithId) & {
@@ -68,7 +63,6 @@ export default function MessagesDashboard() {
           const userData = await getUserByClerkId(user.id);
           if (userData) {
             setUserFirebaseId(userData.id);
-            console.log("User Firebase ID set:", userData.id);
           } else {
             console.error("User not found for Clerk ID:", user.id);
             setError("User profile not found");
@@ -106,12 +100,9 @@ export default function MessagesDashboard() {
       setError(null);
 
       try {
-        console.log("Fetching conversations for user:", userFirebaseId);
-
         // Get conversations
         const conversationsData =
           await getConversationsByUserId(userFirebaseId);
-        console.log("Fetched conversations:", conversationsData);
 
         if (conversationsData && Array.isArray(conversationsData)) {
           // Get all unique participant IDs except current user
@@ -125,8 +116,6 @@ export default function MessagesDashboard() {
               });
             }
           });
-
-          console.log("Unique participant IDs:", Array.from(participantIds));
 
           // Fetch all participant users' data
           const users: ParticipantUsersRecord = {};
@@ -223,39 +212,6 @@ export default function MessagesDashboard() {
     return participantUsers[otherParticipantId] || null;
   };
 
-  // Format relative time (e.g., "2 hours ago")
-  const formatRelativeTime = (timestamp: number): string => {
-    if (!timestamp) return "recently";
-
-    try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-    } catch (error) {
-      console.error("Error formatting time:", error);
-      return "recently";
-    }
-  };
-
-  // Get preview text for conversation
-  const getPreviewText = (conversation: ConversationWithId): string => {
-    if (!conversation.lastMessageText) {
-      return "No messages yet";
-    }
-
-    const isCurrentUserLastSender =
-      userFirebaseId && conversation.lastMessageSenderId === userFirebaseId;
-
-    const prefix = isCurrentUserLastSender ? "You: " : "";
-    const messageText = conversation.lastMessageText;
-
-    // Truncate if too long
-    const maxLength = isCurrentUserLastSender ? 25 : 30;
-    if (messageText.length > maxLength) {
-      return `${prefix}${messageText.substring(0, maxLength)}...`;
-    }
-
-    return `${prefix}${messageText}`;
-  };
-
   // Determine if the user is the seller for a conversation
   const isUserSeller = (conversation: ConversationWithId): boolean => {
     if (!conversation.itemId || !userFirebaseId) return false;
@@ -266,96 +222,50 @@ export default function MessagesDashboard() {
     return item.sellerId === userFirebaseId;
   };
 
-  // Filter conversations by buyer/seller role
-  const sellerConversations = conversations.filter(
+  // Check if conversation was cancelled recently (within 24hrs)
+  const isRecentlyCancelled = (conversation: ConversationWithId): boolean => {
+    const cancelledStatuses = [
+      CONVERSATION_STATUS.BUYER_CANCELLED,
+      CONVERSATION_STATUS.SELLER_CANCELLED,
+    ];
+
+    const isCancelled = cancelledStatuses.includes(conversation.status as any);
+
+    if (!isCancelled) return false;
+
+    // Check if within 24 hours
+    const currentTime = Date.now();
+    const lastUpdateTime = conversation.lastMessageTimestamp || 0;
+    const hoursDifference = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
+
+    return hoursDifference <= 24;
+  };
+
+  // Filter conversations by status
+  const visibleConversations = conversations.filter(
+    (conv) =>
+      conv.status === CONVERSATION_STATUS.ONGOING || isRecentlyCancelled(conv)
+  );
+
+  const sellerConversations = visibleConversations.filter(
     (conv) => conv.itemId && isUserSeller(conv)
   );
-  const buyerConversations = conversations.filter(
+
+  const buyerConversations = visibleConversations.filter(
     (conv) => conv.itemId && !isUserSeller(conv)
   );
 
-  // Include any conversations without itemId in the "All" category only
-
-  // Get the number of each type for badges
+  // Get conversation counts for badges
   const sellerCount = sellerConversations.length;
   const buyerCount = buyerConversations.length;
-  const totalCount = conversations.length;
+  const totalCount = visibleConversations.length;
 
-  // Render a conversation item (extracted as a function for reuse)
-  const renderConversationItem = (conversation: ConversationWithId) => {
-    const otherUser = getOtherParticipant(conversation);
-    const item = conversation.itemId ? itemsData[conversation.itemId] : null;
-
-    return (
-      <Link
-        key={conversation.id}
-        href={`/messages/conversation/${conversation.id}`}
-      >
-        <div className="flex items-start gap-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors">
-          {/* Image - Show item image if available, otherwise user avatar */}
-          {item && item.images && item.images.length > 0 ? (
-            <div className="h-16 w-16 rounded-md overflow-hidden border-2 border-gray-200">
-              <img
-                src={item.images[0] || DEFAULT_ITEM_IMAGE}
-                alt={item.title || "Item"}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <Avatar className="h-12 w-12 border-2 border-gray-200">
-              <AvatarImage
-                src={otherUser?.avatarUrl || DEFAULT_AVATAR}
-                alt={otherUser?.name || "User"}
-                className="object-cover"
-              />
-              <AvatarFallback>
-                {otherUser?.name ? otherUser.name[0] : "U"}
-              </AvatarFallback>
-            </Avatar>
-          )}
-
-          <div className="flex-1 min-w-0">
-            {/* Primary title - Item title or username */}
-            <div className="flex justify-between items-baseline">
-              <p className="font-medium truncate">
-                {item?.title || otherUser?.name || "User"}
-              </p>
-              <span className="text-xs text-gray-500 ml-2 whitespace-nowrap flex items-center">
-                <Clock className="inline mr-1 h-3 w-3" />
-                {formatRelativeTime(conversation.lastMessageTimestamp)}
-              </span>
-            </div>
-
-            {/* Item info or message preview */}
-            {item ? (
-              <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">
-                <Tag className="h-3 w-3" />
-                <span>
-                  {item.type === "commission" ? "Commission" : "Marketplace"}: $
-                  {item.price}
-                </span>
-              </div>
-            ) : null}
-
-            {/* Message preview */}
-            <div className="flex items-center gap-1 mt-1">
-              <MessageSquare className="h-3 w-3 text-gray-500" />
-              <p className="text-sm text-gray-600 truncate">
-                {getPreviewText(conversation)}
-              </p>
-            </div>
-
-            {/* User info if showing an item */}
-            {item && otherUser && (
-              <p className="text-xs text-gray-500 mt-1">
-                {otherUser.name || "Unknown User"}
-              </p>
-            )}
-          </div>
-        </div>
-      </Link>
-    );
-  };
+  // Get any cancelled conversations
+  const hasCancelledConversations = visibleConversations.some(
+    (conv) =>
+      conv.status === CONVERSATION_STATUS.BUYER_CANCELLED ||
+      conv.status === CONVERSATION_STATUS.SELLER_CANCELLED
+  );
 
   if (isLoading) {
     return (
@@ -376,26 +286,28 @@ export default function MessagesDashboard() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-6 font-rubik max-w-3xl">
+      <div className="container mx-auto px-4 py-6 max-w-3xl">
         <h1 className="text-2xl font-semibold mb-6">Messages</h1>
-        <div className="text-center py-10 bg-gray-50 rounded-lg border">
-          <p className="text-red-500">{error}</p>
+        <Card className="p-8 text-center">
+          <p className="text-red-500 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Try Again
           </button>
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 font-rubik max-w-6xl">
-      <h1 className="text-2xl font-semibold mb-6">Messages</h1>
+    <div className="container mx-auto px-4 py-6 max-w-6xl font-rubik">
+      <h1 className="text-5xl font-caladea mb-6 border-b-4 border-[#C41230] pb-2">
+        Messages
+      </h1>
 
-      {conversations.length === 0 ? (
+      {visibleConversations.length === 0 ? (
         <div className="text-center py-10 bg-gray-50 rounded-lg border">
           <p className="text-gray-500">You don't have any conversations yet.</p>
           <p className="text-gray-500 mt-2">
@@ -403,42 +315,49 @@ export default function MessagesDashboard() {
           </p>
         </div>
       ) : (
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs
+          defaultValue="all"
+          className="w-full"
+          onValueChange={setActiveTab}
+        >
           <TabsList className="mb-6 grid grid-cols-3 w-full">
             <TabsTrigger value="all" className="text-center">
               <div className="flex items-center">
                 <Inbox className="w-4 h-4 mr-2" />
                 All
-                <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                  {totalCount}
-                </span>
               </div>
             </TabsTrigger>
             <TabsTrigger value="selling" className="text-center">
               <div className="flex items-center">
-                <LayoutDashboardIcon className="w-4 h-4 mr-2" />
-                Your Items
-                <span className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-                  {sellerCount}
-                </span>
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+                Ongoing Sales
               </div>
             </TabsTrigger>
             <TabsTrigger value="buying" className="text-center">
               <div className="flex items-center">
                 <ShoppingCart className="w-4 h-4 mr-2" />
-                Your Inquiries
-                <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">
-                  {buyerCount}
-                </span>
+                Ongoing Purchases
               </div>
             </TabsTrigger>
           </TabsList>
 
+          {/* Info banner about cancelled conversations */}
+          {hasCancelledConversations && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-start gap-2">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                Cancelled conversations remain visible for 24 hours before being
+                removed. They are indicated with a status badge and cannot be
+                accessed.
+              </p>
+            </div>
+          )}
+
           {/* All conversations tab */}
           <TabsContent value="all">
-            {conversations.length > 0 ? (
-              <div className="space-y-3">
-                {conversations
+            {visibleConversations.length > 0 ? (
+              <div>
+                {visibleConversations
                   .filter(
                     (conv) =>
                       conv && conv.participants && conv.participants.length > 0
@@ -448,7 +367,20 @@ export default function MessagesDashboard() {
                       (b.lastMessageTimestamp || 0) -
                       (a.lastMessageTimestamp || 0)
                   )
-                  .map((conversation) => renderConversationItem(conversation))}
+                  .map((conversation) => (
+                    <ConversationPreview
+                      key={conversation.id}
+                      conversation={conversation}
+                      otherUser={getOtherParticipant(conversation)}
+                      item={
+                        conversation.itemId
+                          ? itemsData[conversation.itemId]
+                          : null
+                      }
+                      userFirebaseId={userFirebaseId}
+                      activeTab={activeTab}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="text-center py-10 bg-gray-50 rounded-lg border">
@@ -460,10 +392,10 @@ export default function MessagesDashboard() {
           {/* Your items (selling) tab */}
           <TabsContent value="selling">
             {sellerConversations.length > 0 ? (
-              <div className="space-y-3">
+              <div>
                 <div className="mb-4">
                   <h2 className="text-lg font-medium text-gray-800 mb-1">
-                    Messages about items you're selling
+                    Messages About Your Ongoing Sales
                   </h2>
                   <p className="text-sm text-gray-500">
                     Conversations with buyers interested in your products
@@ -475,7 +407,20 @@ export default function MessagesDashboard() {
                       (b.lastMessageTimestamp || 0) -
                       (a.lastMessageTimestamp || 0)
                   )
-                  .map((conversation) => renderConversationItem(conversation))}
+                  .map((conversation) => (
+                    <ConversationPreview
+                      key={conversation.id}
+                      conversation={conversation}
+                      otherUser={getOtherParticipant(conversation)}
+                      item={
+                        conversation.itemId
+                          ? itemsData[conversation.itemId]
+                          : null
+                      }
+                      userFirebaseId={userFirebaseId}
+                      activeTab={activeTab}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="text-center py-10 bg-gray-50 rounded-lg border">
@@ -489,13 +434,13 @@ export default function MessagesDashboard() {
             )}
           </TabsContent>
 
-          {/* Your inquiries (buying) tab */}
+          {/* Your Ongoing Purchases (buying) tab */}
           <TabsContent value="buying">
             {buyerConversations.length > 0 ? (
-              <div className="space-y-3">
+              <div>
                 <div className="mb-4">
                   <h2 className="text-lg font-medium text-gray-800 mb-1">
-                    Your inquiries about items
+                    Messages About your Ongoing Purchases
                   </h2>
                   <p className="text-sm text-gray-500">
                     Conversations with sellers about items you're interested in
@@ -507,7 +452,20 @@ export default function MessagesDashboard() {
                       (b.lastMessageTimestamp || 0) -
                       (a.lastMessageTimestamp || 0)
                   )
-                  .map((conversation) => renderConversationItem(conversation))}
+                  .map((conversation) => (
+                    <ConversationPreview
+                      key={conversation.id}
+                      conversation={conversation}
+                      otherUser={getOtherParticipant(conversation)}
+                      item={
+                        conversation.itemId
+                          ? itemsData[conversation.itemId]
+                          : null
+                      }
+                      userFirebaseId={userFirebaseId}
+                      activeTab={activeTab}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="text-center py-10 bg-gray-50 rounded-lg border">

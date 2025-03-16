@@ -50,10 +50,10 @@ export default function EditItemPage() {
   // Form data states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState<number>(0);
+  const [price, setPrice] = useState<string>("");
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
-  const [turnaroundDays, setTurnaroundDays] = useState<number>(7);
+  const [turnaroundDays, setTurnaroundDays] = useState<string>("");
   const [tags, setTags] = useState("");
 
   // Form validation errors
@@ -179,7 +179,7 @@ export default function EditItemPage() {
         // Populate form fields
         setTitle(itemData.title);
         setDescription(itemData.description);
-        setPrice(itemData.price);
+        setPrice(itemData.price ? itemData.price.toString() : "");
 
         // For category, find the key that maps to the stored value
         const categoryKey =
@@ -196,7 +196,9 @@ export default function EditItemPage() {
             )?.[0] || "";
           setCondition(conditionKey);
         } else if ("turnaroundDays" in itemData) {
-          setTurnaroundDays(itemData.turnaroundDays);
+          setTurnaroundDays(
+            itemData.turnaroundDays ? itemData.turnaroundDays.toString() : ""
+          );
         }
 
         // Set tags
@@ -274,7 +276,6 @@ export default function EditItemPage() {
       newImages.splice(index, 1);
       return newImages;
     });
-
     setImageUrls((prevUrls) => {
       const newUrls = [...prevUrls];
       URL.revokeObjectURL(newUrls[index]); // Clean up URL object
@@ -325,7 +326,8 @@ export default function EditItemPage() {
       newErrors.description = "Description cannot exceed 1000 characters";
     }
 
-    if (!price || price <= 0) {
+    const numPrice = price ? Number(price) : 0;
+    if (!price || numPrice <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
 
@@ -337,7 +339,11 @@ export default function EditItemPage() {
       newErrors.condition = "Please select condition";
     }
 
-    if (itemType === "commission" && (!turnaroundDays || turnaroundDays < 1)) {
+    const numTurnaroundDays = turnaroundDays ? Number(turnaroundDays) : 0;
+    if (
+      itemType === "commission" &&
+      (!turnaroundDays || numTurnaroundDays < 1)
+    ) {
       newErrors.turnaroundDays = "Turnaround days must be at least 1";
     }
 
@@ -382,7 +388,7 @@ export default function EditItemPage() {
         const itemData = {
           title,
           description,
-          price: Number(price),
+          price: price === "" ? 0 : Number(price),
           category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES], // Get the value from the constant
           condition: ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS], // Get the value from the constant
           tags: processedTags,
@@ -397,10 +403,10 @@ export default function EditItemPage() {
         const itemData = {
           title,
           description,
-          price: Number(price),
+          price: price === "" ? 0 : Number(price),
           category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES], // Get the value from the constant
           tags: processedTags,
-          turnaroundDays: Number(turnaroundDays),
+          turnaroundDays: turnaroundDays === "" ? 7 : Number(turnaroundDays),
           images: combinedImageUrls,
           updatedAt: Date.now(),
           isAvailable: true, // Keep current availability
@@ -476,6 +482,14 @@ export default function EditItemPage() {
     return (
       <div className="flex justify-center items-center h-[80vh]">
         <SignIn />
+      </div>
+    );
+  }
+
+  if (initialLoading) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loading />
       </div>
     );
   }
@@ -567,7 +581,7 @@ export default function EditItemPage() {
                     min="1"
                     step="0.01"
                     value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    onChange={(e) => setPrice(e.target.value)}
                     required
                   />
                   {errors.price && (
@@ -640,7 +654,7 @@ export default function EditItemPage() {
                     type="number"
                     min="1"
                     value={turnaroundDays}
-                    onChange={(e) => setTurnaroundDays(Number(e.target.value))}
+                    onChange={(e) => setTurnaroundDays(e.target.value)}
                     required
                   />
                   <p className="text-xs text-gray-500">

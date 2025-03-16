@@ -394,6 +394,7 @@ export default function ItemPage() {
                       src={image}
                       alt={`Thumbnail ${index + 1}`}
                       fill
+                      sizes="(max-width: 768px) 25vw, 10vw"
                       className="object-cover"
                     />
                   </div>
@@ -423,6 +424,7 @@ export default function ItemPage() {
                   src={validImages[currentIndex]}
                   alt={`Main image ${currentIndex + 1}`}
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw" // Add this line
                   className="object-cover"
                   priority={currentIndex === 0}
                 />

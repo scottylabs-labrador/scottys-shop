@@ -43,10 +43,10 @@ export default function CreateItemPage() {
   // Form data states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState<number>(0);
+  const [price, setPrice] = useState<string>("");
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
-  const [turnaroundDays, setTurnaroundDays] = useState<number>(7);
+  const [turnaroundDays, setTurnaroundDays] = useState<string>("7");
   const [tags, setTags] = useState("");
 
   // Form validation errors
@@ -179,7 +179,8 @@ export default function CreateItemPage() {
       newErrors.description = "Description cannot exceed 1000 characters";
     }
 
-    if (!price || price <= 0) {
+    const numPrice = price ? Number(price) : 0;
+    if (!price || numPrice <= 0) {
       newErrors.price = "Price must be greater than 0";
     }
 
@@ -191,7 +192,11 @@ export default function CreateItemPage() {
       newErrors.condition = "Please select condition";
     }
 
-    if (itemType === "commission" && (!turnaroundDays || turnaroundDays < 1)) {
+    const numTurnaroundDays = turnaroundDays ? Number(turnaroundDays) : 0;
+    if (
+      itemType === "commission" &&
+      (!turnaroundDays || numTurnaroundDays < 1)
+    ) {
       newErrors.turnaroundDays = "Turnaround days must be at least 1";
     }
 
@@ -228,7 +233,7 @@ export default function CreateItemPage() {
           sellerId: userId,
           title,
           description,
-          price: Number(price),
+          price: price === "" ? 0 : Number(price),
           category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES],
           condition: ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS],
           tags: processedTags,
@@ -244,10 +249,10 @@ export default function CreateItemPage() {
           sellerId: userId,
           title,
           description,
-          price: Number(price),
+          price: price === "" ? 0 : Number(price),
           category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES],
           tags: processedTags,
-          turnaroundDays: Number(turnaroundDays),
+          turnaroundDays: turnaroundDays === "" ? 7 : Number(turnaroundDays),
           isAvailable: true,
           images: imageUrls,
           createdAt: Date.now(),
@@ -373,7 +378,7 @@ export default function CreateItemPage() {
                     min="1"
                     step="0.01"
                     value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    onChange={(e) => setPrice(e.target.value)}
                     required
                   />
                   {errors.price && (
@@ -446,7 +451,7 @@ export default function CreateItemPage() {
                     type="number"
                     min="1"
                     value={turnaroundDays}
-                    onChange={(e) => setTurnaroundDays(Number(e.target.value))}
+                    onChange={(e) => setTurnaroundDays(e.target.value)}
                     required
                   />
                   <p className="text-xs text-gray-500">

@@ -86,13 +86,13 @@ export default function FavoritesPage() {
   if (!isLoaded || isLoading) return <Loading />;
 
   return (
-    <div className="container max-w-8xl mx-auto px-[100px] py-6">
+    <div className="max-w-8xl mx-auto px-[125px] py-6">
       <h1 className="text-5xl font-caladea mb-6 border-b-4 border-[#C41230] pb-2">
         Favorites
       </h1>
 
       {/* Grid layout for favorite items */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6">
         {favorites.map((item) => (
           <ItemCard
             key={`${item.type}_${item.id}`}

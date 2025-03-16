@@ -27,14 +27,17 @@ interface FilterState {
   category?: string;
   condition?: string;
   maxTurnaroundDays?: number;
+  type?: string; // Added for search functionality
 }
 
 interface FilterProps {
   onFilterChange: (
     filters: FilterState,
-    queryConstraints: QueryConstraint[]
+    queryConstraints?: QueryConstraint[]
   ) => void;
   isMarketplace?: boolean;
+  isCommission?: boolean;
+  isSearch?: boolean;
   initialFilters?: FilterState;
 }
 
@@ -49,6 +52,8 @@ const categories = Object.values(ITEM_CATEGORIES);
 export function ItemFilter({
   onFilterChange,
   isMarketplace = false,
+  isCommission = false,
+  isSearch = false,
   initialFilters = {},
 }: FilterProps) {
   // State management
@@ -70,6 +75,9 @@ export function ItemFilter({
   );
   const [maxTurnaroundDays, setMaxTurnaroundDays] = useState<number>(
     initialFilters.maxTurnaroundDays || 30
+  );
+  const [itemType, setItemType] = useState<string | undefined>(
+    initialFilters.type
   );
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
@@ -105,7 +113,7 @@ export function ItemFilter({
     }
 
     if (
-      !isMarketplace &&
+      (isCommission || isSearch) &&
       initialFilters.maxTurnaroundDays &&
       initialFilters.maxTurnaroundDays < 30
     ) {
@@ -116,8 +124,17 @@ export function ItemFilter({
       });
     }
 
+    if (isSearch && initialFilters.type) {
+      initialActiveFilters.push({
+        type: "itemType",
+        value: initialFilters.type,
+        displayValue:
+          initialFilters.type === "marketplace" ? "Marketplace" : "Commission",
+      });
+    }
+
     setActiveFilters(initialActiveFilters);
-  }, [initialFilters, isMarketplace]);
+  }, [initialFilters, isMarketplace, isCommission, isSearch]);
 
   // Input handlers
   const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,11 +178,11 @@ export function ItemFilter({
     if (filters.category) {
       constraints.push(where("category", "==", filters.category));
     }
-    if (isMarketplace && filters.condition) {
+    if ((isMarketplace || isSearch) && filters.condition) {
       constraints.push(where("condition", "==", filters.condition));
     }
     if (
-      !isMarketplace &&
+      (isCommission || isSearch) &&
       filters.maxTurnaroundDays &&
       filters.maxTurnaroundDays < 30
     ) {
@@ -177,7 +194,7 @@ export function ItemFilter({
     // Add availability filter based on item type
     if (isMarketplace) {
       constraints.push(where("status", "==", "AVAILABLE"));
-    } else {
+    } else if (isCommission) {
       constraints.push(where("isAvailable", "==", true));
     }
 
@@ -204,7 +221,7 @@ export function ItemFilter({
       });
     }
 
-    if (condition) {
+    if (condition && (isMarketplace || isSearch)) {
       newFilters.push({
         type: "condition",
         value: condition,
@@ -212,11 +229,19 @@ export function ItemFilter({
       });
     }
 
-    if (!isMarketplace && maxTurnaroundDays < 30) {
+    if ((isCommission || isSearch) && maxTurnaroundDays < 30) {
       newFilters.push({
         type: "turnaround",
         value: maxTurnaroundDays.toString(),
         displayValue: `${maxTurnaroundDays} days`,
+      });
+    }
+
+    if (isSearch && itemType) {
+      newFilters.push({
+        type: "itemType",
+        value: itemType,
+        displayValue: itemType === "marketplace" ? "Marketplace" : "Commission",
       });
     }
 
@@ -226,12 +251,20 @@ export function ItemFilter({
       minPrice: minPrice > 0 ? minPrice : undefined,
       maxPrice: maxPrice < 1000 ? maxPrice : undefined,
       category,
-      condition,
-      maxTurnaroundDays: !isMarketplace ? maxTurnaroundDays : undefined,
+      condition: isMarketplace || isSearch ? condition : undefined,
+      maxTurnaroundDays:
+        isCommission || isSearch ? maxTurnaroundDays : undefined,
+      type: isSearch ? itemType : undefined,
     };
 
-    const queryConstraints = createQueryConstraints(filters);
-    onFilterChange(filters, queryConstraints);
+    if (isSearch) {
+      // For search page, we don't need query constraints as we'll handle filtering in the search service
+      onFilterChange(filters);
+    } else {
+      // For marketplace or commission pages, pass query constraints
+      const queryConstraints = createQueryConstraints(filters);
+      onFilterChange(filters, queryConstraints);
+    }
   };
 
   const removeFilter = (filterToRemove: ActiveFilter) => {
@@ -249,6 +282,9 @@ export function ItemFilter({
         break;
       case "turnaround":
         setMaxTurnaroundDays(30);
+        break;
+      case "itemType":
+        setItemType(undefined);
         break;
     }
 
@@ -275,13 +311,18 @@ export function ItemFilter({
       maxTurnaroundDays:
         filterToRemove.type === "turnaround"
           ? undefined
-          : !isMarketplace
+          : isCommission || isSearch
             ? maxTurnaroundDays
             : undefined,
+      type: filterToRemove.type === "itemType" ? undefined : itemType,
     };
 
-    const queryConstraints = createQueryConstraints(updatedFilters);
-    onFilterChange(updatedFilters, queryConstraints);
+    if (isSearch) {
+      onFilterChange(updatedFilters);
+    } else {
+      const queryConstraints = createQueryConstraints(updatedFilters);
+      onFilterChange(updatedFilters, queryConstraints);
+    }
   };
 
   const resetFilters = () => {
@@ -291,17 +332,23 @@ export function ItemFilter({
     setCategory(undefined);
     setCondition(undefined);
     setMaxTurnaroundDays(30);
+    setItemType(undefined);
     setActiveFilters([]);
 
-    const baseConstraints = isMarketplace
-      ? [where("status", "==", "AVAILABLE")]
-      : [where("isAvailable", "==", true)];
+    if (isSearch) {
+      onFilterChange({});
+    } else {
+      const baseConstraints = isMarketplace
+        ? [where("status", "==", "AVAILABLE")]
+        : [where("isAvailable", "==", true)];
 
-    onFilterChange({}, baseConstraints);
+      onFilterChange({}, baseConstraints);
+    }
   };
 
   const filterContent = (
     <div className="space-y-6">
+      {/* Price Range */}
       <div className="space-y-2">
         <h4 className="text-sm font-rubik font-medium">Price Range</h4>
         <div className="flex gap-4 items-center">
@@ -344,6 +391,7 @@ export function ItemFilter({
         </div>
       </div>
 
+      {/* Category */}
       <div className="space-y-2">
         <h4 className="text-sm font-rubik font-medium">Category</h4>
         <Select value={category} onValueChange={setCategory}>
@@ -364,7 +412,34 @@ export function ItemFilter({
         </Select>
       </div>
 
-      {isMarketplace ? (
+      {/* Item Type - Only show in Search */}
+      {isSearch && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-rubik font-medium">Item Type</h4>
+          <Select value={itemType} onValueChange={setItemType}>
+            <SelectTrigger className="cursor-pointer font-rubik">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value="marketplace"
+                className="cursor-pointer font-rubik"
+              >
+                Marketplace
+              </SelectItem>
+              <SelectItem
+                value="commission"
+                className="cursor-pointer font-rubik"
+              >
+                Commission
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Condition - Show in Marketplace or Search */}
+      {(isMarketplace || isSearch) && (
         <div className="space-y-2">
           <h4 className="text-sm font-rubik font-medium">Condition</h4>
           <Select value={condition} onValueChange={setCondition}>
@@ -390,7 +465,10 @@ export function ItemFilter({
             </SelectContent>
           </Select>
         </div>
-      ) : (
+      )}
+
+      {/* Turnaround Days - Show in Commission or Search */}
+      {(isCommission || isSearch) && (
         <div className="space-y-2">
           <h4 className="text-sm font-rubik font-medium">
             Max Turnaround Days
@@ -447,21 +525,23 @@ export function ItemFilter({
           {activeFilters.map((filter, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-lg text-sm"
+              className="flex items-center gap-2 bg-secondary pl-4 pr-2 py-2 rounded-lg text-sm"
             >
-              <span>{filter.displayValue}</span>
+              <span className="font-light font-rubik">
+                {filter.displayValue}
+              </span>
               <button
                 onClick={() => removeFilter(filter)}
                 className="hover:bg-secondary-foreground/10 rounded-full p-1"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3" strokeWidth={3} />
               </button>
             </div>
           ))}
           {activeFilters.length > 0 && (
             <button
               onClick={resetFilters}
-              className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 hover:underline"
+              className="text-sm text-muted-foreground hover:text-foreground px-2 py-1 hover:underline font-rubik"
             >
               Clear all
             </button>

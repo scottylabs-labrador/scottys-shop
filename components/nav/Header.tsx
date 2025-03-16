@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import SearchBar from "@/components/nav/SearchBar";
+import SearchBar from "@/components/search/SearchBar";
 import { getUserByClerkId, type UserWithId } from "@/firebase/users";
 
 // Navigation items for header menu
@@ -98,6 +98,7 @@ const MobileMenu = ({
             width={40}
             height={40}
             className="object-contain"
+            priority
           />
           <IconButton icon={X} onClick={onClose} title="Close" />
         </div>
@@ -271,7 +272,7 @@ const Header = () => {
     };
 
     fetchUserData();
-  });
+  }, [user?.id]);
 
   return (
     <nav className="border-b py-3 sticky top-0 bg-white z-50 font-rubik">
@@ -301,6 +302,7 @@ const Header = () => {
                 width={65}
                 height={65}
                 className="object-contain"
+                priority
               />
             </Link>
 
@@ -327,6 +329,7 @@ const Header = () => {
               width={45}
               height={45}
               className="object-contain"
+              priority
             />
           </Link>
         </div>

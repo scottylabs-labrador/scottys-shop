@@ -179,3 +179,15 @@ body {
 .animate-particle-out {
   animation: particle-out 0.5s ease-out forwards;
 }
+
+/* CSS to remove number input arrows (spinners) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}

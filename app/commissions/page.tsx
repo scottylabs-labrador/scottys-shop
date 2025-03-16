@@ -123,7 +123,7 @@ export default function CommissionsPage() {
   if (loading) return <Loading />;
 
   return (
-    <div className="flex flex-col max-w-7xl mx-auto px-4 py-6">
+    <div className="flex flex-col max-w-8xl mx-auto px-[125px] py-6">
       <div className="mb-6">
         <ItemFilter
           onFilterChange={handleFilterChange}

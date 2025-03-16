@@ -453,7 +453,7 @@ export default function ConversationPage() {
             <div ref={messageEndRef} className="h-1" />
           </>
         ) : (
-          // If no messages, show empty message indicator
+          // If no messages, show empty message indicator. SHOULD NOT HAPPEN
           <>
             <div className="text-center text-gray-500 my-auto">
               <p>No messages yet</p>
@@ -467,7 +467,7 @@ export default function ConversationPage() {
         )}
       </div>
 
-      {/* Action buttons moved to bottom before message input */}
+      {/* Action buttons */}
       {itemData && (
         <div className="mt-4 mb-3">
           <ConversationActionButtons
