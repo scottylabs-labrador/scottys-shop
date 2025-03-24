@@ -1,10 +1,14 @@
+/**
+ * Badge components for displaying item properties
+ * Provides consistent styling for status, type, condition and other item metadata
+ */
 "use client";
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
 import {
-  MPITEM_STATUS,
+  ITEM_STATUS,
   ITEM_TYPE,
   ITEM_CONDITIONS,
   statusColors,
@@ -30,17 +34,17 @@ export const TypeBadge = ({
 export const StatusBadge = ({
   status,
 }: {
-  status: keyof typeof MPITEM_STATUS | string;
+  status: keyof typeof ITEM_STATUS | string;
 }) => {
   // Normalize status if it's not already a key
-  const normalizedStatus = Object.keys(MPITEM_STATUS).includes(status)
-    ? (status as keyof typeof MPITEM_STATUS)
-    : (Object.entries(MPITEM_STATUS).find(
+  const normalizedStatus = Object.keys(ITEM_STATUS).includes(status)
+    ? (status as keyof typeof ITEM_STATUS)
+    : (Object.entries(ITEM_STATUS).find(
         ([_, val]) => val === status
-      )?.[0] as keyof typeof MPITEM_STATUS);
+      )?.[0] as keyof typeof ITEM_STATUS);
 
   const displayStatus = normalizedStatus
-    ? MPITEM_STATUS[normalizedStatus]
+    ? ITEM_STATUS[normalizedStatus]
     : status;
   const colorClass =
     statusColors[displayStatus as keyof typeof statusColors] ||
@@ -95,8 +99,8 @@ export const AvailabilityBadge = ({
 }) => {
   if (isCommission) {
     const displayStatus = isAvailable
-      ? MPITEM_STATUS.AVAILABLE
-      : MPITEM_STATUS.SOLD;
+      ? ITEM_STATUS.AVAILABLE
+      : ITEM_STATUS.SOLD;
     const colorClass =
       statusColors[displayStatus as keyof typeof statusColors] ||
       "bg-gray-100 text-gray-800";
@@ -107,6 +111,6 @@ export const AvailabilityBadge = ({
       </Badge>
     );
   } else {
-    return <StatusBadge status={status || MPITEM_STATUS.AVAILABLE} />;
+    return <StatusBadge status={status || ITEM_STATUS.AVAILABLE} />;
   }
 };

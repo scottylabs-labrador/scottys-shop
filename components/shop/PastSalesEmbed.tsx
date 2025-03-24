@@ -1,3 +1,7 @@
+/**
+ * Component for displaying past sales history
+ * Shows completed transactions and sales statistics
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,17 +15,24 @@ import {
   getUserById,
   type UserWithId,
 } from "@/firebase/users";
-import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
-import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
+import { getMPItemById } from "@/firebase/mpItems";
+import { getCommItemById } from "@/firebase/commItems";
 import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
 import ConversationPreview from "@/components/conversations/ConversationPreview";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DollarSign, Calendar, AlertTriangle } from "lucide-react";
+import { formatPrice } from "@/utils/helpers";
 
 // Type for combined item data with type information
-type ItemWithType = (MPItemWithId | CommItemWithId) & {
+type ItemWithType = {
+  id: string;
+  sellerId: string;
+  title: string;
+  description?: string;
+  price: number;
+  images: string[];
   type: "marketplace" | "commission";
 };
 
@@ -225,16 +236,6 @@ export default function PastSalesEmbed() {
       fetchCompletedSales();
     }
   }, [userFirebaseId]);
-
-  // Format price with commas for readability
-  const formatPrice = (price: number): string => {
-    return price.toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-  };
 
   // Group sales by month for the summary
   const groupSalesByMonth = () => {

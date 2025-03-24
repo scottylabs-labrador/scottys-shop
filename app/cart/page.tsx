@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/ItemConstants";
+import { ITEM_TYPE, ITEM_STATUS } from "@/utils/ItemConstants";
 import { getMPItemsByStatus, type MPItemWithId } from "@/firebase/mpItems";
 import {
   getAvailableCommItems,
@@ -28,7 +28,7 @@ export default function CartPage() {
         let cartCommItems: CommItemWithId[] = [];
 
         if (isSignedIn && user?.id) {
-          cartMPItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE); // determine how we want to handle this
+          cartMPItems = await getMPItemsByStatus(ITEM_STATUS.AVAILABLE); // determine how we want to handle this
           cartCommItems = await getAvailableCommItems();
 
           // Find items in cart

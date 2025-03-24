@@ -1,3 +1,7 @@
+/**
+ * Error display component for conversation-related errors
+ * Provides a way to navigate back from an error state
+ */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";

@@ -1,11 +1,17 @@
+/**
+ * Search bar component for site-wide searching
+ * Provides real-time suggestions and search functionality
+ */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
-import { searchItems, type SearchResult } from "@/firebase/searchService";
+import { searchItems } from "@/firebase/searchService";
+import { SearchResult } from "@/utils/types";
 import Image from "next/image";
 import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { formatPrice } from "@/utils/helpers";
 
 const SearchBar = () => {
   const [query, setQuery] = useState("");
@@ -76,7 +82,7 @@ const SearchBar = () => {
   const handleItemClick = (item: SearchResult) => {
     const itemType =
       item.type === "marketplace"
-        ? ITEM_TYPE.MARKETPLACE.toLowerCase
+        ? ITEM_TYPE.MARKETPLACE.toLowerCase()
         : ITEM_TYPE.COMMISSION.toLowerCase();
     router.push(`/item/${itemType}/${item.id}`);
     setShowResults(false);
@@ -100,16 +106,6 @@ const SearchBar = () => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  };
-
-  // Format price display
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(price);
   };
 
   return (

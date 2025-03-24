@@ -1,3 +1,7 @@
+/**
+ * Preview component for conversations in the message list
+ * Displays conversation metadata, last message, and item information
+ */
 "use client";
 
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import {
-  AlertCircle,
   Clock,
   LayoutDashboard,
   MessageSquare,
@@ -16,14 +19,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { type ConversationWithId } from "@/firebase/conversations";
-import {
-  CONVERSATION_STATUS,
-  statusColors,
-  statusDisplayNames,
-} from "@/utils/ConversationConstants";
-import type { ConversationParticipant } from "@/utils/ConversationTypes";
-import type { UserWithId } from "@/firebase/users";
+import { ConversationWithId } from "@/firebase/conversations";
+import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
+import { UserWithId } from "@/firebase/users";
+import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { formatPrice } from "@/utils/helpers";
 
 const DEFAULT_AVATAR = "/assets/default-avatar.png";
 const DEFAULT_ITEM_IMAGE = "/assets/default-item.png";
@@ -36,7 +36,7 @@ type ItemWithType = {
   description?: string;
   price: number;
   images: string[];
-  type: "marketplace" | "commission";
+  type: typeof ITEM_TYPE.COMMISSION | typeof ITEM_TYPE.MARKETPLACE;
 };
 
 interface ConversationPreviewProps {
@@ -60,16 +60,14 @@ export default function ConversationPreview({
   const isCancelled = [
     CONVERSATION_STATUS.BUYER_CANCELLED,
     CONVERSATION_STATUS.SELLER_CANCELLED,
-  ].includes(conversation.status as any);
+  ].includes(conversation.status);
 
   const isCompleted = conversation.status === CONVERSATION_STATUS.COMPLETED;
   const isOngoing = conversation.status === CONVERSATION_STATUS.ONGOING;
 
   // Determine the user's role in this conversation
   const isUserSeller = item ? item.sellerId === userFirebaseId : false;
-  const userRole: ConversationParticipant["role"] = isUserSeller
-    ? "seller"
-    : "buyer";
+  const userRole = isUserSeller ? "seller" : "buyer";
 
   // Format relative time (e.g., "2 hours ago")
   const formatRelativeTime = (timestamp: number): string => {
@@ -102,16 +100,6 @@ export default function ConversationPreview({
     }
 
     return `${prefix}${messageText}`;
-  };
-
-  // Format price with commas for readability
-  const formatPrice = (price: number): string => {
-    return price.toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
   };
 
   // Get status message based on conversation status
@@ -249,15 +237,13 @@ export default function ConversationPreview({
                     {item && (
                       <Badge
                         className={`${
-                          item.type === "commission"
+                          item.type === ITEM_TYPE.COMMISSION
                             ? "bg-purple-100 text-purple-800 border-purple-200"
                             : "bg-blue-100 text-blue-800 border-blue-200"
                         } border shadow-sm`}
                       >
                         <Tag className="h-3 w-3 mr-1" />
-                        {item.type === "commission"
-                          ? "Commission"
-                          : "Marketplace"}
+                        {item.type}
                       </Badge>
                     )}
                     {/* Price tag if available */}

@@ -1,16 +1,25 @@
+/**
+ * Preview component for items in lists and search results
+ * Displays a compact view of item information
+ */
 import React from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { MPItemWithId } from "@/firebase/mpItems";
-import { CommItemWithId } from "@/firebase/commItems";
 import { Badge } from "@/components/ui/badge";
 import { Tag, Clock } from "lucide-react";
 
 // Type for item which can be either a marketplace item or commission item
-type ItemType = MPItemWithId | CommItemWithId;
+interface ItemWithId {
+  id: string;
+  title: string;
+  price: number;
+  category: string;
+  images: string[];
+  [key: string]: any; // Allow additional properties
+}
 
 interface ItemPreviewProps {
-  item: ItemType;
+  item: ItemWithId;
   itemType: "marketplace" | "commission";
 }
 
@@ -29,10 +38,10 @@ const ItemPreview: React.FC<ItemPreviewProps> = ({ item, itemType }) => {
   // Determine secondary info based on item type
   const secondaryInfo =
     itemType === "commission"
-      ? `${(item as CommItemWithId).turnaroundDays} day${
-          (item as CommItemWithId).turnaroundDays !== 1 ? "s" : ""
+      ? `${item.turnaroundDays} day${
+          item.turnaroundDays !== 1 ? "s" : ""
         } turnaround`
-      : `Condition: ${(item as MPItemWithId).condition}`;
+      : `Condition: ${item.condition}`;
 
   return (
     <Card className="mt-2 mb-4 overflow-hidden border border-gray-200 hover:border-blue-400 transition-all duration-300 hover:shadow-lg group">

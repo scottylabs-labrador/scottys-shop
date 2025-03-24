@@ -1,3 +1,7 @@
+/**
+ * Loading indicator component
+ * Displays a spinner when content is loading
+ */
 function Loading() {
   return (
     <div className="flex justify-center items-center min-h-[200px]">

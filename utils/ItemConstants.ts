@@ -1,67 +1,51 @@
-export const MPITEM_STATUS = {
+/**
+ * Constants and utilities for item status, types, categories, and conditions
+ * Used by both marketplace items and commission items for consistent state management
+ */
+
+import { createConstants, createConstantHelpers } from "./constants";
+
+// Item status constants
+export const ITEM_STATUS = createConstants({
   AVAILABLE: "Available",
   PENDING: "Pending",
   SOLD: "Sold",
-} as const;
+});
 
-export const ITEM_TYPE = {
+// Item type constants
+export const ITEM_TYPE = createConstants({
   COMMISSION: "Commission",
   MARKETPLACE: "Marketplace",
-} as const;
+});
 
-export const ITEM_CATEGORIES = {
+// Item category constants
+export const ITEM_CATEGORIES = createConstants({
   CLOTHING: "Clothing",
   JEWELRY: "Jewelry",
   ART: "Art",
   SHOES: "Shoes",
   OTHER: "Other",
-} as const;
+});
 
-export const ITEM_CONDITIONS = {
+// Item condition constants
+export const ITEM_CONDITIONS = createConstants({
   NEW: "New",
   LIKE_NEW: "Like New",
   GOOD: "Good",
   FAIR: "Fair",
-} as const;
+});
 
 // Helper functions for consistent handling
-export const getDisplayText = {
-  status: (key: keyof typeof MPITEM_STATUS): string => MPITEM_STATUS[key],
-  type: (key: keyof typeof ITEM_TYPE): string => ITEM_TYPE[key],
-  category: (key: keyof typeof ITEM_CATEGORIES): string => ITEM_CATEGORIES[key],
-  condition: (key: keyof typeof ITEM_CONDITIONS): string =>
-    ITEM_CONDITIONS[key],
-};
-
-// Get key from value (reverse lookup)
-export const getKeyFromValue = {
-  status: (value: string): keyof typeof MPITEM_STATUS | undefined => {
-    return Object.entries(MPITEM_STATUS).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof MPITEM_STATUS;
-  },
-  type: (value: string): keyof typeof ITEM_TYPE | undefined => {
-    return Object.entries(ITEM_TYPE).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof ITEM_TYPE;
-  },
-  category: (value: string): keyof typeof ITEM_CATEGORIES | undefined => {
-    return Object.entries(ITEM_CATEGORIES).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof ITEM_CATEGORIES;
-  },
-  condition: (value: string): keyof typeof ITEM_CONDITIONS | undefined => {
-    return Object.entries(ITEM_CONDITIONS).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof ITEM_CONDITIONS;
-  },
-};
+export const itemStatusHelpers = createConstantHelpers(ITEM_STATUS);
+export const itemTypeHelpers = createConstantHelpers(ITEM_TYPE);
+export const itemCategoryHelpers = createConstantHelpers(ITEM_CATEGORIES);
+export const itemConditionHelpers = createConstantHelpers(ITEM_CONDITIONS);
 
 // Colors for different status values
 export const statusColors = {
-  [MPITEM_STATUS.AVAILABLE]: "bg-green-100 text-green-700",
-  [MPITEM_STATUS.PENDING]: "bg-yellow-100 text-yellow-700",
-  [MPITEM_STATUS.SOLD]: "bg-red-100 text-red-700",
+  [ITEM_STATUS.AVAILABLE]: "bg-green-100 text-green-700",
+  [ITEM_STATUS.PENDING]: "bg-yellow-100 text-yellow-700",
+  [ITEM_STATUS.SOLD]: "bg-red-100 text-red-700",
 };
 
 // Colors for different item types

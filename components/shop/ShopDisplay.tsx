@@ -1,19 +1,17 @@
+/**
+ * Component for displaying shop items
+ * Provides item grid view with optional editing controls
+ */
 "use client";
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Store, Pencil, LayoutDashboardIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import ItemDashboard from "@/components/shop/ItemDashboard";
 import { getCommItemsBySeller } from "@/firebase/commItems";
 import { getMPItemsBySeller } from "@/firebase/mpItems";
 import { useToast } from "@/hooks/use-toast";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
 import Loading from "@/components/utils/Loading";
 
 // Interface for shop items (both marketplace and commission types)

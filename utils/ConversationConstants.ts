@@ -1,52 +1,37 @@
+/**
+ * Constants and utilities for conversation status, types, and message states
+ * Provides consistent handling of conversation states throughout the application
+ */
+
+import { createConstants, createConstantHelpers } from "./constants";
+
 // Conversation status constants
-export const CONVERSATION_STATUS = {
+export const CONVERSATION_STATUS = createConstants({
   ONGOING: "ongoing",
   COMPLETED: "completed",
   BUYER_CANCELLED: "buyercancelled",
   SELLER_CANCELLED: "sellercancelled",
-} as const;
+});
 
 // Conversation type constants
-export const CONVERSATION_TYPE = {
+export const CONVERSATION_TYPE = createConstants({
   DIRECT: "direct", // Direct messaging between users
   ITEM: "item", // Conversation about an item
-} as const;
+});
 
 // Message status constants
-export const MESSAGE_STATUS = {
+export const MESSAGE_STATUS = createConstants({
   SENT: "sent",
   DELIVERED: "delivered",
   READ: "read",
   FAILED: "failed",
-} as const;
+});
 
-// Helper functions for consistent handling
-export const getDisplayText = {
-  status: (key: keyof typeof CONVERSATION_STATUS): string =>
-    CONVERSATION_STATUS[key],
-  type: (key: keyof typeof CONVERSATION_TYPE): string => CONVERSATION_TYPE[key],
-  messageStatus: (key: keyof typeof MESSAGE_STATUS): string =>
-    MESSAGE_STATUS[key],
-};
-
-// Get key from value (reverse lookup)
-export const getKeyFromValue = {
-  status: (value: string): keyof typeof CONVERSATION_STATUS | undefined => {
-    return Object.entries(CONVERSATION_STATUS).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof CONVERSATION_STATUS;
-  },
-  type: (value: string): keyof typeof CONVERSATION_TYPE | undefined => {
-    return Object.entries(CONVERSATION_TYPE).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof CONVERSATION_TYPE;
-  },
-  messageStatus: (value: string): keyof typeof MESSAGE_STATUS | undefined => {
-    return Object.entries(MESSAGE_STATUS).find(
-      ([_, val]) => val === value
-    )?.[0] as keyof typeof MESSAGE_STATUS;
-  },
-};
+// Helper functions
+export const conversationStatusHelpers =
+  createConstantHelpers(CONVERSATION_STATUS);
+export const conversationTypeHelpers = createConstantHelpers(CONVERSATION_TYPE);
+export const messageStatusHelpers = createConstantHelpers(MESSAGE_STATUS);
 
 // Colors for different conversation status values
 export const statusColors = {
@@ -68,14 +53,6 @@ export const statusDisplayNames = {
   [CONVERSATION_STATUS.COMPLETED]: "Completed",
   [CONVERSATION_STATUS.BUYER_CANCELLED]: "Cancelled by Buyer",
   [CONVERSATION_STATUS.SELLER_CANCELLED]: "Cancelled by Seller",
-};
-
-// Icons for different status values (assuming you use a library like heroicons or similar)
-export const statusIcons = {
-  [CONVERSATION_STATUS.ONGOING]: "ChatIcon",
-  [CONVERSATION_STATUS.COMPLETED]: "CheckCircleIcon",
-  [CONVERSATION_STATUS.BUYER_CANCELLED]: "XCircleIcon",
-  [CONVERSATION_STATUS.SELLER_CANCELLED]: "XCircleIcon",
 };
 
 // Time constants for conversation-related operations (in milliseconds)

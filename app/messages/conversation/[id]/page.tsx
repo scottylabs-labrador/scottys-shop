@@ -26,7 +26,7 @@ import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
 import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
-import { MPITEM_STATUS } from "@/utils/ItemConstants";
+import { ITEM_STATUS } from "@/utils/ItemConstants";
 
 // Import components directly
 import ConversationHeader from "@/components/conversations/ConversationHeader";
@@ -251,7 +251,7 @@ export default function ConversationPage() {
 
       // If it's a marketplace item, also update the item status
       if (itemData.type === "marketplace") {
-        await updateMPItemStatus(itemData.id, MPITEM_STATUS.SOLD);
+        await updateMPItemStatus(itemData.id, ITEM_STATUS.SOLD);
       }
 
       // Send system message

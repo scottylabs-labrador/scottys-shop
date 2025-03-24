@@ -15,7 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { MPITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
 import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
 import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
 import {
@@ -291,8 +291,7 @@ export default function ItemPage() {
       const initialMessage = canPurchase
         ? getItemPurchaseMessageTemplate(
             item.title,
-            isCommissionType ? "commission" : "marketplace",
-            item.price
+            isCommissionType ? "commission" : "marketplace"
           )
         : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
 
@@ -346,12 +345,12 @@ export default function ItemPage() {
   const validImages = item.images.filter((url) => url && url.trim() !== "");
   const isAvailable = isCommissionType
     ? (item as CommItemWithId).isAvailable
-    : (item as MPItemWithId).status === MPITEM_STATUS.AVAILABLE;
+    : (item as MPItemWithId).status === ITEM_STATUS.AVAILABLE;
 
   // Get the status string consistently
   const statusText = isCommissionType
     ? (item as CommItemWithId).isAvailable
-      ? MPITEM_STATUS.AVAILABLE
+      ? ITEM_STATUS.AVAILABLE
       : "Unavailable"
     : (item as MPItemWithId).status;
 
@@ -574,8 +573,7 @@ export default function ItemPage() {
                         const initialMessage = canPurchase
                           ? getItemPurchaseMessageTemplate(
                               item.title,
-                              isCommissionType ? "commission" : "marketplace",
-                              item.price
+                              isCommissionType ? "commission" : "marketplace"
                             )
                           : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
 

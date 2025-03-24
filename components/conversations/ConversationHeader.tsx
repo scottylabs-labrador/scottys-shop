@@ -1,3 +1,7 @@
+/**
+ * Header component for conversation view
+ * Shows conversation title, status, and participants
+ */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -5,7 +9,7 @@ import { UserWithId } from "@/firebase/users";
 import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
 
 interface ConversationHeaderProps {
-  title: string; // Added title prop
+  title: string;
   status: string;
   otherUser: UserWithId | null;
   isSeller: boolean;

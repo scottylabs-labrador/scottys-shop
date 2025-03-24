@@ -2,23 +2,19 @@
 
 import { useUser, SignIn } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   getConversationsByUserId,
   type ConversationWithId,
 } from "@/firebase/conversations";
-import {
-  CONVERSATION_STATUS,
-  statusColors,
-  statusDisplayNames,
-} from "@/utils/ConversationConstants";
+import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
 import {
   getUserByClerkId,
   getUserById,
   type UserWithId,
 } from "@/firebase/users";
-import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
-import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
+import { getMPItemById } from "@/firebase/mpItems";
+import { getCommItemById } from "@/firebase/commItems";
+import { ITEM_TYPE } from "@/utils/ItemConstants";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
 import { Inbox, Info, LayoutDashboard, ShoppingCart } from "lucide-react";
@@ -26,18 +22,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import ConversationPreview from "@/components/conversations/ConversationPreview";
 
-// Type for combined item data with type information
-type ItemWithType = (MPItemWithId | CommItemWithId) & {
-  type: "marketplace" | "commission";
+/**
+ * Type for combined item data with type information
+ * This represents either a marketplace or commission item with a standardized type field
+ */
+type ItemWithType = {
+  id: string;
+  sellerId: string;
+  title: string;
+  description?: string;
+  price: number;
+  images: string[];
+  type: typeof ITEM_TYPE.COMMISSION | typeof ITEM_TYPE.MARKETPLACE;
 };
 
-// Type for items data record
+/**
+ * A lookup object that maps item IDs to their data
+ * Allows for fast O(1) access to items by their ID without searching arrays
+ */
 interface ItemsDataRecord {
   [key: string]: ItemWithType;
 }
 
-// Type for participant users record
-interface ParticipantUsersRecord {
+/**
+ * A lookup object that maps user IDs to their data
+ * Allows for quick rendering of conversations
+ */
+interface UsersDataRecord {
   [key: string]: UserWithId;
 }
 
@@ -45,142 +56,136 @@ export default function MessagesDashboard() {
   const { isSignedIn, user } = useUser();
   const { toast } = useToast();
 
-  // Core state with proper types
+  // Core state
   const [conversations, setConversations] = useState<ConversationWithId[]>([]);
   const [userFirebaseId, setUserFirebaseId] = useState<string | null>(null);
-  const [participantUsers, setParticipantUsers] =
-    useState<ParticipantUsersRecord>({});
+  const [usersData, setUsersData] = useState<UsersDataRecord>({});
   const [itemsData, setItemsData] = useState<ItemsDataRecord>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
 
-  // Get user's Firestore ID from Clerk ID
+  // Step 1: Get the current user's Firebase ID from their Clerk ID
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (isSignedIn && user?.id) {
-        try {
-          const userData = await getUserByClerkId(user.id);
-          if (userData) {
-            setUserFirebaseId(userData.id);
-          } else {
-            console.error("User not found for Clerk ID:", user.id);
-            setError("User profile not found");
-            toast({
-              title: "User not found",
-              description: "Your user profile couldn't be loaded",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          setError("Failed to load user profile");
+    async function fetchUserFirebaseId() {
+      if (!isSignedIn || !user?.id) return;
+
+      try {
+        const userData = await getUserByClerkId(user.id);
+        if (userData) {
+          setUserFirebaseId(userData.id);
+        } else {
+          setError("User profile not found");
           toast({
-            title: "Error",
-            description: "Failed to load your user profile",
+            title: "User not found",
+            description: "Your user profile couldn't be loaded",
             variant: "destructive",
           });
-        } finally {
-          if (!userFirebaseId) {
-            setIsLoading(false);
-          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        setError("Failed to load user profile");
+        toast({
+          title: "Error",
+          description: "Failed to load your user profile",
+          variant: "destructive",
+        });
+      } finally {
+        if (!userFirebaseId) {
+          setIsLoading(false);
         }
       }
-    };
+    }
 
-    fetchUserData();
+    fetchUserFirebaseId();
   }, [isSignedIn, user?.id, toast, userFirebaseId]);
 
-  // Fetch conversations and associated items
+  // Step 2: Load conversations and associated data (users and items)
   useEffect(() => {
-    const fetchConversationsAndItems = async () => {
-      if (!userFirebaseId) return;
+    if (!userFirebaseId) return;
 
+    async function loadConversationsData() {
       setIsLoading(true);
       setError(null);
 
       try {
-        // Get conversations
-        const conversationsData =
+        // 1. Get all conversations for the current user
+        const userConversations =
           await getConversationsByUserId(userFirebaseId);
 
-        if (conversationsData && Array.isArray(conversationsData)) {
-          // Get all unique participant IDs except current user
-          const participantIds = new Set<string>();
-          conversationsData.forEach((conv) => {
-            if (conv?.participants && Array.isArray(conv.participants)) {
-              conv.participants.forEach((id) => {
-                if (id && id !== userFirebaseId) {
-                  participantIds.add(id);
-                }
-              });
+        if (!Array.isArray(userConversations)) {
+          throw new Error("Invalid conversations data format");
+        }
+
+        // 2. Extract all unique user IDs and item IDs for batch loading
+        const otherUserIds = new Set<string>();
+        const itemIdsToLoad = new Map<string, string>(); // Map of itemId -> itemType
+
+        userConversations.forEach((conv) => {
+          // Collect other participant IDs
+          conv.participants?.forEach((participantId) => {
+            if (participantId && participantId !== userFirebaseId) {
+              otherUserIds.add(participantId);
             }
           });
 
-          // Fetch all participant users' data
-          const users: ParticipantUsersRecord = {};
-          await Promise.all(
-            Array.from(participantIds).map(async (id) => {
+          // Collect item IDs with their types
+          if (conv.itemId) {
+            itemIdsToLoad.set(conv.itemId, conv.itemType || "marketplace");
+          }
+        });
+
+        // 3. Load all users in parallel
+        const usersResult: UsersDataRecord = {};
+        await Promise.all(
+          Array.from(otherUserIds).map(async (userId) => {
+            try {
+              const userData = await getUserById(userId);
+              if (userData) {
+                usersResult[userId] = userData;
+              }
+            } catch (error) {
+              console.error(`Error loading user ${userId}:`, error);
+            }
+          })
+        );
+
+        // 4. Load all items in parallel
+        const itemsResult: ItemsDataRecord = {};
+        await Promise.all(
+          Array.from(itemIdsToLoad.entries()).map(
+            async ([itemId, itemType]) => {
               try {
-                const userData = await getUserById(id);
-                if (userData) {
-                  users[id] = userData;
+                if (itemType === "commission") {
+                  const itemData = await getCommItemById(itemId);
+                  if (itemData) {
+                    itemsResult[itemId] = {
+                      ...itemData,
+                      type: ITEM_TYPE.COMMISSION,
+                    };
+                  }
+                } else {
+                  const itemData = await getMPItemById(itemId);
+                  if (itemData) {
+                    itemsResult[itemId] = {
+                      ...itemData,
+                      type: ITEM_TYPE.MARKETPLACE,
+                    };
+                  }
                 }
               } catch (error) {
-                console.error(`Error fetching participant ${id}:`, error);
+                console.error(`Error loading item ${itemId}:`, error);
               }
-            })
-          );
+            }
+          )
+        );
 
-          setParticipantUsers(users);
-
-          // Fetch item data for each conversation with an itemId
-          const items: ItemsDataRecord = {};
-          await Promise.all(
-            conversationsData
-              .filter((conv) => conv.itemId)
-              .map(async (conv) => {
-                try {
-                  if (!conv.itemId) return;
-
-                  // Determine item type
-                  const itemType = conv.itemType || "marketplace"; // Default to marketplace if not specified
-
-                  // Fetch the appropriate item
-                  if (itemType === "commission") {
-                    const itemData = await getCommItemById(conv.itemId);
-                    if (itemData) {
-                      items[conv.itemId] = {
-                        ...itemData,
-                        type: "commission" as const,
-                      };
-                    }
-                  } else {
-                    const itemData = await getMPItemById(conv.itemId);
-                    if (itemData) {
-                      items[conv.itemId] = {
-                        ...itemData,
-                        type: "marketplace" as const,
-                      };
-                    }
-                  }
-                } catch (error) {
-                  console.error(`Error fetching item ${conv.itemId}:`, error);
-                }
-              })
-          );
-
-          setItemsData(items);
-          setConversations(conversationsData);
-        } else {
-          console.error(
-            "Invalid conversations data format:",
-            conversationsData
-          );
-          setError("Invalid data format");
-        }
+        // 5. Update state with all loaded data
+        setConversations(userConversations);
+        setUsersData(usersResult);
+        setItemsData(itemsResult);
       } catch (error) {
-        console.error("Error fetching conversations:", error);
+        console.error("Error loading conversations data:", error);
         setError("Failed to load conversations");
         toast({
           title: "Error",
@@ -190,58 +195,61 @@ export default function MessagesDashboard() {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    if (userFirebaseId) {
-      fetchConversationsAndItems();
     }
+
+    loadConversationsData();
   }, [userFirebaseId, toast]);
 
-  // Helper to get other participant in a conversation
-  const getOtherParticipant = (
+  /**
+   * Get the other participant in a conversation
+   * @param conversation The conversation to find the other participant for
+   * @returns The other user in the conversation, or null if not found
+   */
+  function getOtherParticipant(
     conversation: ConversationWithId
-  ): UserWithId | null => {
+  ): UserWithId | null {
     if (!userFirebaseId || !conversation.participants) return null;
 
-    const otherParticipantId = conversation.participants.find(
+    const otherUserId = conversation.participants.find(
       (id) => id !== userFirebaseId
     );
+    return otherUserId ? usersData[otherUserId] || null : null;
+  }
 
-    if (!otherParticipantId) return null;
-
-    return participantUsers[otherParticipantId] || null;
-  };
-
-  // Determine if the user is the seller for a conversation
-  const isUserSeller = (conversation: ConversationWithId): boolean => {
-    if (!conversation.itemId || !userFirebaseId) return false;
+  /**
+   * Check if the current user is the seller in this conversation
+   * @param conversation The conversation to check
+   * @returns True if the user is the seller, false otherwise
+   */
+  function isUserSeller(conversation: ConversationWithId): boolean {
+    if (!userFirebaseId || !conversation.itemId) return false;
 
     const item = itemsData[conversation.itemId];
-    if (!item) return false;
+    return item ? item.sellerId === userFirebaseId : false;
+  }
 
-    return item.sellerId === userFirebaseId;
-  };
-
-  // Check if conversation was cancelled recently (within 24hrs)
-  const isRecentlyCancelled = (conversation: ConversationWithId): boolean => {
+  /**
+   * Check if a conversation was cancelled within the last 24 hours
+   * @param conversation The conversation to check
+   * @returns True if the conversation was recently cancelled
+   */
+  function isRecentlyCancelled(conversation: ConversationWithId): boolean {
     const cancelledStatuses = [
       CONVERSATION_STATUS.BUYER_CANCELLED,
       CONVERSATION_STATUS.SELLER_CANCELLED,
     ];
 
-    const isCancelled = cancelledStatuses.includes(conversation.status as any);
+    if (!cancelledStatuses.includes(conversation.status)) return false;
 
-    if (!isCancelled) return false;
+    // Check if cancellation was within last 24 hours
+    const hoursSinceCancellation =
+      (Date.now() - (conversation.lastMessageTimestamp || 0)) /
+      (1000 * 60 * 60);
 
-    // Check if within 24 hours
-    const currentTime = Date.now();
-    const lastUpdateTime = conversation.lastMessageTimestamp || 0;
-    const hoursDifference = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
+    return hoursSinceCancellation <= 24;
+  }
 
-    return hoursDifference <= 24;
-  };
-
-  // Filter conversations by status
+  // Filter conversations for display
   const visibleConversations = conversations.filter(
     (conv) =>
       conv.status === CONVERSATION_STATUS.ONGOING || isRecentlyCancelled(conv)
@@ -255,12 +263,7 @@ export default function MessagesDashboard() {
     (conv) => conv.itemId && !isUserSeller(conv)
   );
 
-  // Get conversation counts for badges
-  const sellerCount = sellerConversations.length;
-  const buyerCount = buyerConversations.length;
-  const totalCount = visibleConversations.length;
-
-  // Get any cancelled conversations
+  // Check if there are any cancelled conversations
   const hasCancelledConversations = visibleConversations.some(
     (conv) =>
       conv.status === CONVERSATION_STATUS.BUYER_CANCELLED ||
@@ -275,7 +278,6 @@ export default function MessagesDashboard() {
     );
   }
 
-  // Show Sign In if user is not authenticated
   if (!user) {
     return (
       <div className="flex justify-center items-center h-[80vh]">
@@ -358,10 +360,7 @@ export default function MessagesDashboard() {
             {visibleConversations.length > 0 ? (
               <div>
                 {visibleConversations
-                  .filter(
-                    (conv) =>
-                      conv && conv.participants && conv.participants.length > 0
-                  )
+                  .filter((conv) => conv?.participants?.length > 0)
                   .sort(
                     (a, b) =>
                       (b.lastMessageTimestamp || 0) -

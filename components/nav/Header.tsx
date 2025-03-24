@@ -1,3 +1,7 @@
+/**
+ * Main header/navigation component
+ * Provides site navigation, search, and user account access
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +17,6 @@ import {
   LogOut,
   Heart,
   ShoppingCart,
-  Store,
   History,
   Settings,
   MessageCircle,
