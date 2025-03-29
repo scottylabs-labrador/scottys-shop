@@ -1,3 +1,7 @@
+/**
+ * Main shop component that integrates all shop-related functionality
+ * Handles shop data fetching, state management, and rendering
+ */
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -10,7 +14,7 @@ import BannerSection from "@/components/shop/BannerSection";
 import ProfileInfo from "@/components/shop/ProfileInfo";
 import ShopInfo from "@/components/shop/ShopInfo";
 import ShopDisplay from "@/components/shop/ShopDisplay";
-import { ShopOwnerType, FormData } from "@/utils/ShopTypes";
+import { ShopOwner, ShopFormData } from "@/utils/types";
 import {
   getUserByAndrewId,
   getUserByClerkId,
@@ -41,7 +45,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
   const [originalBannerUrl, setOriginalBannerUrl] = useState<string | null>(
     null
   );
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ShopFormData>({
     name: "",
     title: "",
     description: "",
@@ -52,7 +56,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
     return pathname?.includes("/dashboard");
   }, [pathname]);
 
-  const adaptUserToShopOwner = (user: UserWithId): ShopOwnerType => {
+  const adaptUserToShopOwner = (user: UserWithId): ShopOwner => {
     return {
       ...user,
       _id: user.id,

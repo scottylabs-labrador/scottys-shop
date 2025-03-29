@@ -1,3 +1,7 @@
+/**
+ * Action buttons for conversations
+ * Provides functionality to mark conversations as completed or cancelled
+ */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";

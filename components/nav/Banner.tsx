@@ -1,3 +1,7 @@
+/**
+ * Banner component for site-wide announcements
+ * Displays rotating announcement messages at the top of the page
+ */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -20,7 +24,7 @@ const Banner: React.FC = () => {
       setCurrentMessageIndex((prevIndex) =>
         prevIndex === messages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 5000); // Change message every 7 seconds
+    }, 5000); // Change message every 5 seconds
 
     return () => clearInterval(interval);
   }, [isPaused]);

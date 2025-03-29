@@ -1,3 +1,7 @@
+/**
+ * Filter component for filtering items based on various criteria
+ * Used across the application to filter marketplace and commission items
+ */
 import { useState, useEffect } from "react";
 import {
   Select,
@@ -20,25 +24,17 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { ITEM_CATEGORIES } from "@/utils/ItemConstants";
 import { Input } from "@/components/ui/input";
 import { QueryConstraint, where } from "firebase/firestore";
-
-interface FilterState {
-  minPrice?: number;
-  maxPrice?: number;
-  category?: string;
-  condition?: string;
-  maxTurnaroundDays?: number;
-  type?: string; // Added for search functionality
-}
+import { SearchFilters } from "@/utils/types";
 
 interface FilterProps {
   onFilterChange: (
-    filters: FilterState,
+    filters: SearchFilters,
     queryConstraints?: QueryConstraint[]
   ) => void;
   isMarketplace?: boolean;
   isCommission?: boolean;
   isSearch?: boolean;
-  initialFilters?: FilterState;
+  initialFilters?: SearchFilters;
 }
 
 interface ActiveFilter {
@@ -166,7 +162,9 @@ export function ItemFilter({
   };
 
   // Convert filters to Firebase query constraints
-  const createQueryConstraints = (filters: FilterState): QueryConstraint[] => {
+  const createQueryConstraints = (
+    filters: SearchFilters
+  ): QueryConstraint[] => {
     const constraints: QueryConstraint[] = [];
 
     if (filters.minPrice !== undefined) {
@@ -247,7 +245,7 @@ export function ItemFilter({
 
     setActiveFilters(newFilters);
 
-    const filters: FilterState = {
+    const filters: SearchFilters = {
       minPrice: minPrice > 0 ? minPrice : undefined,
       maxPrice: maxPrice < 1000 ? maxPrice : undefined,
       category,
@@ -293,7 +291,7 @@ export function ItemFilter({
     );
     setActiveFilters(newFilters);
 
-    const updatedFilters: FilterState = {
+    const updatedFilters: SearchFilters = {
       minPrice:
         filterToRemove.type === "price"
           ? undefined

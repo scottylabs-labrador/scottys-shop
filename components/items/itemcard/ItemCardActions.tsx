@@ -1,3 +1,7 @@
+/**
+ * Action buttons for item cards in edit mode
+ * Provides edit and delete functionality
+ */
 "use client";
 
 import { Edit, Trash2 } from "lucide-react";
@@ -11,11 +15,11 @@ interface ItemCardActionsProps {
 export default function ItemCardActions({
   onEdit,
   onDelete,
-  isLoading = false
+  isLoading = false,
 }: ItemCardActionsProps) {
   return (
     <div className="absolute top-0 right-0 p-2 flex flex-col gap-2">
-      <button 
+      <button
         onClick={onEdit}
         className="p-2 rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
         title="Edit item"
@@ -23,7 +27,7 @@ export default function ItemCardActions({
       >
         <Edit className="w-4 h-4 text-gray-700" />
       </button>
-      <button 
+      <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

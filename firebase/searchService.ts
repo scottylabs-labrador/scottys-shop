@@ -1,3 +1,8 @@
+/**
+ * Search service for querying items across collections
+ * Provides functionality to search and filter items from both marketplace and commission collections
+ */
+
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -8,41 +13,15 @@ import {
   limit as firestoreLimit,
   QueryConstraint,
 } from "firebase/firestore";
-import { MPITEM_STATUS } from "@/utils/ItemConstants";
-
-// Combined search result type
-export interface SearchResult {
-  id: string;
-  type: "marketplace" | "commission";
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  sellerId: string;
-  images: string[];
-  createdAt: number;
-  // Marketplace specific
-  status?: string;
-  condition?: string;
-  // Commission specific
-  turnaroundDays?: number;
-  isAvailable?: boolean;
-  tags: string[];
-  // Include additional non-DB property for internal sorting
-  _relevanceScore?: number;
-}
-
-export interface SearchFilters {
-  minPrice?: number;
-  maxPrice?: number;
-  category?: string;
-  condition?: string;
-  maxTurnaroundDays?: number;
-  type?: string;
-}
+import { SearchResult, SearchFilters } from "@/utils/types";
+import { ITEM_STATUS } from "@/utils/ItemConstants";
 
 /**
  * Search for items across both marketplace and commission collections
+ * @param searchQuery The search query string
+ * @param filters Optional filters to apply to the search
+ * @param itemLimit Maximum number of items to return
+ * @returns Array of search results matching the query and filters
  */
 export const searchItems = async (
   searchQuery: string,
@@ -57,7 +36,7 @@ export const searchItems = async (
     if (!filters.type || filters.type === "marketplace") {
       const mpItemsCollection = collection(db, "mpItems");
       const mpConstraints: QueryConstraint[] = [
-        where("status", "==", MPITEM_STATUS.AVAILABLE),
+        where("status", "==", ITEM_STATUS.AVAILABLE),
         orderBy("createdAt", "desc"),
         firestoreLimit(itemLimit),
       ];
@@ -166,6 +145,12 @@ export const searchItems = async (
   }
 };
 
+/**
+ * Filter search results using client-side filtering
+ * @param results The search results to filter
+ * @param filters The filters to apply
+ * @returns Filtered search results
+ */
 export const filterSearchResults = (
   results: SearchResult[],
   filters: SearchFilters
@@ -215,6 +200,12 @@ export const filterSearchResults = (
 
 /**
  * Get similar items based on category and tags
+ * @param itemId ID of the current item
+ * @param itemType Type of the current item
+ * @param category Category of the current item
+ * @param tags Tags of the current item
+ * @param limit Maximum number of similar items to return
+ * @returns Array of similar items
  */
 export const getSimilarItems = async (
   itemId: string,
@@ -231,7 +222,7 @@ export const getSimilarItems = async (
     const constraints: QueryConstraint[] = [
       where("category", "==", category),
       itemType === "marketplace"
-        ? where("status", "==", MPITEM_STATUS.AVAILABLE)
+        ? where("status", "==", ITEM_STATUS.AVAILABLE)
         : where("isAvailable", "==", true),
       orderBy("createdAt", "desc"),
       firestoreLimit(20), // Get more than needed to filter by relevance

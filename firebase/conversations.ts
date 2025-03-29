@@ -1,3 +1,8 @@
+/**
+ * Firebase operations for conversations and messages
+ * Handles CRUD operations for the conversations collection and its messages subcollection
+ */
+
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -12,36 +17,35 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
-import { addConversationToUser, removeConversationFromUser } from "./users";
+import { Conversation, Message } from "@/utils/types";
 import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
+import {
+  addConversationToUser,
+  removeConversationFromUser,
+} from "@/firebase/users";
 
-// Message between users
-export interface Message {
-  senderId: string;
-  receiverId: string;
-  content: string;
-  isRead: boolean;
-  createdAt: number;
-}
-
-// Conversation status type
-export type ConversationStatus =
-  | typeof CONVERSATION_STATUS.ONGOING
-  | typeof CONVERSATION_STATUS.COMPLETED
-  | typeof CONVERSATION_STATUS.BUYER_CANCELLED
-  | typeof CONVERSATION_STATUS.SELLER_CANCELLED;
-
-// Conversation containing multiple messages
-export interface Conversation {
-  participants: string[]; // Array of user IDs participating in the conversation
-  itemId?: string; // Optional item ID that the conversation is about
-  itemType?: string; // 'commission' or 'marketplace'
-  lastMessageTimestamp: number;
-  lastMessageText: string;
-  lastMessageSenderId: string;
-  createdAt: number;
-  status: ConversationStatus; // New status field
-}
+/**
+ * Firebase Collection: conversations
+ * {
+ *   participants: string[]; // Array of user IDs participating in the conversation
+ *   itemId?: string; // Optional item ID that the conversation is about
+ *   itemType?: string; // 'commission' or 'marketplace'
+ *   lastMessageTimestamp: number;
+ *   lastMessageText: string;
+ *   lastMessageSenderId: string;
+ *   createdAt: number;
+ *   status: string; // "ongoing", "completed", "buyercancelled", "sellercancelled"
+ * }
+ *
+ * Firebase Subcollection: conversations/{conversationId}/messages
+ * {
+ *   senderId: string;
+ *   receiverId: string;
+ *   content: string;
+ *   isRead: boolean;
+ *   createdAt: number;
+ * }
+ */
 
 // Message with ID
 export interface MessageWithId extends Message {
@@ -176,11 +180,13 @@ export const getConversationsByIds = async (
   }
 };
 
-// Retrieves all conversations by UserId
+// Get all conversations for a user
 export const getConversationsByUserId = async (
-  userId: string
+  userId: string | null
 ): Promise<ConversationWithId[]> => {
   try {
+    if (!userId) return [];
+
     const q = query(
       conversationsCollection,
       where("participants", "array-contains", userId),
@@ -202,7 +208,9 @@ export const getConversationsByUserId = async (
 // Get conversation status
 export const getConversationStatus = async (
   conversationId: string
-): Promise<ConversationStatus | null> => {
+): Promise<
+  (typeof CONVERSATION_STATUS)[keyof typeof CONVERSATION_STATUS] | null
+> => {
   try {
     const conversation = await getConversationById(conversationId);
     if (!conversation) {
@@ -218,7 +226,7 @@ export const getConversationStatus = async (
 // Update conversation status
 export const updateConversationStatus = async (
   conversationId: string,
-  newStatus: ConversationStatus
+  newStatus: (typeof CONVERSATION_STATUS)[keyof typeof CONVERSATION_STATUS]
 ): Promise<void> => {
   try {
     await updateDoc(doc(conversationsCollection, conversationId), {
@@ -281,7 +289,7 @@ export const getCompletedConversationsByUserId = async (
 // Add message to a conversation
 export const addMessageToConversation = async (
   conversationId: string,
-  messageData: Omit<Message, "createdAt">
+  messageData: Omit<Message, "id" | "createdAt">
 ): Promise<string> => {
   try {
     const messagesCollection = collection(
@@ -292,7 +300,7 @@ export const addMessageToConversation = async (
     );
 
     const timestamp = Date.now();
-    const completeMessageData: Message = {
+    const completeMessageData: Omit<Message, "id"> = {
       ...messageData,
       createdAt: timestamp,
     };
@@ -427,7 +435,7 @@ export const createItemPurchaseConversation = async (
     ]);
 
     // Then add the initial message
-    const messageData: Omit<Message, "createdAt"> = {
+    const messageData: Omit<Message, "id" | "createdAt"> = {
       senderId: buyerId,
       receiverId: sellerId,
       content: initialMessage,
@@ -483,8 +491,7 @@ export const getUnreadMessageCount = async (
 // Get a default message template for item purchase
 export const getItemPurchaseMessageTemplate = (
   itemTitle: string,
-  itemType: string,
-  itemPrice: number
+  itemType: string
 ): string => {
   const itemTypeFormatted =
     itemType === "commission" ? "commission" : "product";

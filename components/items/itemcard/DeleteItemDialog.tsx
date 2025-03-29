@@ -1,3 +1,7 @@
+/**
+ * Confirmation dialog for deleting items
+ * Provides a safeguard to prevent accidental deletion
+ */
 "use client";
 
 import {
@@ -35,11 +39,11 @@ export default function DeleteItemDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               onDelete();
-            }} 
+            }}
             disabled={isLoading}
             className="bg-red-600 hover:bg-red-700"
           >

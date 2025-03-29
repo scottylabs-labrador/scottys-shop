@@ -1,3 +1,8 @@
+/**
+ * Firebase operations for marketplace items
+ * Handles CRUD operations for the mpItems collection
+ */
+
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -13,32 +18,44 @@ import {
   limit,
   QueryConstraint,
 } from "firebase/firestore";
-import { MPITEM_STATUS } from "@/utils/ItemConstants";
+import { MarketplaceItem } from "@/utils/types";
+import { ITEM_STATUS } from "@/utils/ItemConstants";
 
-interface MPItem {
-  sellerId: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  condition: string;
-  tags: string[];
-  status: (typeof MPITEM_STATUS)[keyof typeof MPITEM_STATUS];
-  images: string[];
-  createdAt: number;
-}
+/**
+ * Firebase Collection: mpItems
+ * {
+ *   sellerId: string;
+ *   title: string;
+ *   description: string;
+ *   price: number;
+ *   category: string;
+ *   condition: string;
+ *   tags: string[];
+ *   status: string; // "Available", "Pending", "Sold"
+ *   images: string[];
+ *   createdAt: number;
+ * }
+ */
 
 // Add id to the type when returning from Firestore
-export interface MPItemWithId extends MPItem {
+export interface MPItemWithId extends MarketplaceItem {
   id: string;
 }
 
 const mpItemsCollection = collection(db, "mpItems");
 
 // Create a new marketplace item
-export const createMPItem = async (itemData: MPItem): Promise<string> => {
+export const createMPItem = async (
+  itemData: Omit<MarketplaceItem, "id">
+): Promise<string> => {
   try {
-    const docRef = await addDoc(mpItemsCollection, itemData);
+    // Ensure status is set
+    const completeItemData = {
+      ...itemData,
+      status: itemData.status || ITEM_STATUS.AVAILABLE,
+    };
+
+    const docRef = await addDoc(mpItemsCollection, completeItemData);
     return docRef.id;
   } catch (error) {
     console.error("Error creating marketplace item:", error);
@@ -91,7 +108,7 @@ export const getMPItemsByCategory = async (
     const q = query(
       mpItemsCollection,
       where("category", "==", category),
-      where("status", "==", MPITEM_STATUS.AVAILABLE)
+      where("status", "==", ITEM_STATUS.AVAILABLE)
     );
     const querySnapshot = await getDocs(q);
 
@@ -115,7 +132,7 @@ export const getMPItemsByPriceRange = async (
       mpItemsCollection,
       where("price", ">=", minPrice),
       where("price", "<=", maxPrice),
-      where("status", "==", MPITEM_STATUS.AVAILABLE)
+      where("status", "==", ITEM_STATUS.AVAILABLE)
     );
     const querySnapshot = await getDocs(q);
 
@@ -131,7 +148,7 @@ export const getMPItemsByPriceRange = async (
 
 // Get marketplace items by status
 export const getMPItemsByStatus = async (
-  status: (typeof MPITEM_STATUS)[keyof typeof MPITEM_STATUS]
+  status: (typeof ITEM_STATUS)[keyof typeof ITEM_STATUS]
 ): Promise<MPItemWithId[]> => {
   try {
     const q = query(mpItemsCollection, where("status", "==", status));
@@ -150,7 +167,7 @@ export const getMPItemsByStatus = async (
 // Update marketplace item
 export const updateMPItem = async (
   itemId: string,
-  updates: Partial<MPItem>
+  updates: Partial<MarketplaceItem>
 ): Promise<void> => {
   try {
     const itemRef = doc(mpItemsCollection, itemId);
@@ -174,7 +191,7 @@ export const deleteMPItem = async (itemId: string): Promise<void> => {
 // Update item status
 export const updateMPItemStatus = async (
   itemId: string,
-  status: (typeof MPITEM_STATUS)[keyof typeof MPITEM_STATUS]
+  status: (typeof ITEM_STATUS)[keyof typeof ITEM_STATUS]
 ): Promise<void> => {
   try {
     const itemRef = doc(mpItemsCollection, itemId);
@@ -191,7 +208,7 @@ export const getLatestMPItems = async (
 ): Promise<MPItemWithId[]> => {
   try {
     const queryConstraints: QueryConstraint[] = [
-      where("status", "==", MPITEM_STATUS.AVAILABLE),
+      where("status", "==", ITEM_STATUS.AVAILABLE),
       orderBy("createdAt", "desc"),
       limit(limitCount),
     ];

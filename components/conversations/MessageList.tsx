@@ -1,3 +1,7 @@
+/**
+ * Displays a list of messages in a conversation
+ * Renders message bubbles and handles different message types
+ */
 import React, { RefObject } from "react";
 import { format } from "date-fns";
 import { MessageWithId } from "@/firebase/conversations";

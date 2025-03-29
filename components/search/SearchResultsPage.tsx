@@ -1,16 +1,18 @@
+/**
+ * Page component for displaying search results
+ * Provides filtering and sorting options for search results
+ */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  searchItems,
-  filterSearchResults,
-  type SearchResult,
-} from "@/firebase/searchService";
+import { searchItems, filterSearchResults } from "@/firebase/searchService";
+import { SearchResult } from "@/utils/types";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import { ITEM_TYPE } from "@/utils/ItemConstants";
 import Loading from "@/components/utils/Loading";
+import { SearchFilters } from "@/utils/types";
 
 export default function SearchResultsPage() {
   const searchParams = useSearchParams();
@@ -24,7 +26,7 @@ export default function SearchResultsPage() {
   const [initialLoad, setInitialLoad] = useState(true);
 
   // Initialize filters from URL parameters
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<SearchFilters>({
     minPrice: searchParams.get("minPrice")
       ? Number(searchParams.get("minPrice"))
       : undefined,
@@ -107,7 +109,7 @@ export default function SearchResultsPage() {
     setActiveTab(value);
 
     // Update URL
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams.toString());
     if (value !== "all") {
       params.set("type", value);
     } else {
@@ -129,7 +131,7 @@ export default function SearchResultsPage() {
   };
 
   // Update URL and state when filters change
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: SearchFilters) => {
     const params = new URLSearchParams();
 
     // Preserve search query
@@ -217,7 +219,7 @@ export default function SearchResultsPage() {
         />
       </div>
 
-      {/* Custom Tabs (styled like in SellerDashboard) */}
+      {/* Custom Tabs */}
       <div className="mb-6">
         <div className="flex space-x-8 text-left font-rubik font-semibold">
           <button
@@ -284,7 +286,11 @@ export default function SearchResultsPage() {
                     <ItemCard
                       key={`${item.type}-${item.id}`}
                       itemId={item.id}
-                      type={ITEM_TYPE.MARKETPLACE}
+                      type={
+                        item.type === "marketplace"
+                          ? ITEM_TYPE.MARKETPLACE
+                          : ITEM_TYPE.COMMISSION
+                      }
                     />
                   ))}
                 </div>

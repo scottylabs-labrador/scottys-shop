@@ -1,3 +1,7 @@
+/**
+ * Primary item card component used across the application
+ * Displays an item with image, details, and interactive elements
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -29,30 +33,12 @@ import {
 } from "@/firebase/commItems";
 
 // Import constants
-import { MPITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
-
-// Define interfaces based on Firebase data models
-interface BaseItem {
-  id: string;
-  title: string;
-  price: number;
-  images: string[];
-  sellerId: string;
-}
-
-interface MPItem extends BaseItem {
-  condition: string;
-  status: string;
-}
-
-interface CommItem extends BaseItem {
-  turnaroundDays: number;
-  isAvailable: boolean;
-}
+import { ITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
+import { isItemAvailable } from "@/utils/helpers";
 
 interface ItemCardProps {
   itemId: string;
-  type: "Commission" | "Marketplace";
+  type: typeof ITEM_TYPE.COMMISSION | typeof ITEM_TYPE.MARKETPLACE;
   isDashboard?: boolean;
   onItemDeleted?: () => void;
 }
@@ -64,7 +50,7 @@ export default function ItemCard({
   onItemDeleted,
 }: ItemCardProps) {
   // State
-  const [item, setItem] = useState<MPItem | CommItem | null>(null);
+  const [item, setItem] = useState<any | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -137,8 +123,16 @@ export default function ItemCard({
   }
 
   // Filter out empty image URLs
-  const validImages = item.images.filter((url) => url && url.trim() !== "");
+  const validImages = item.images.filter(
+    (url: string) => url && url.trim() !== ""
+  );
   if (validImages.length === 0) return null;
+
+  // Check if the item is available
+  const itemAvailable = isItemAvailable(
+    item,
+    isCommissionItem ? "commission" : "marketplace"
+  );
 
   // Handle favoriting/unfavoriting
   const handleFavoriteClick = async (e: React.MouseEvent) => {
@@ -230,29 +224,29 @@ export default function ItemCard({
     setIsLoading(true);
     try {
       if (isCommissionItem) {
-        const commItem = item as CommItem;
+        const commItem = item;
         await updateCommItemAvailability(itemId, !commItem.isAvailable);
         setItem({
           ...commItem,
           isAvailable: !commItem.isAvailable,
-        } as CommItem);
+        });
 
         toast({
           title: "Success",
           description: `Commission is now ${!commItem.isAvailable ? "available" : "unavailable"}`,
         });
       } else {
-        const mpItem = item as MPItem;
+        const mpItem = item;
         const newStatus =
-          mpItem.status === MPITEM_STATUS.AVAILABLE
-            ? MPITEM_STATUS.PENDING
-            : MPITEM_STATUS.AVAILABLE;
+          mpItem.status === ITEM_STATUS.AVAILABLE
+            ? ITEM_STATUS.PENDING
+            : ITEM_STATUS.AVAILABLE;
 
         await updateMPItemStatus(itemId, newStatus);
         setItem({
           ...mpItem,
           status: newStatus,
-        } as MPItem);
+        });
 
         toast({
           title: "Success",
@@ -271,11 +265,6 @@ export default function ItemCard({
     }
   };
 
-  // Check if the item is available
-  const isItemAvailable = isCommissionItem
-    ? (item as CommItem).isAvailable
-    : (item as MPItem).status === MPITEM_STATUS.AVAILABLE;
-
   return (
     <>
       <div
@@ -291,7 +280,7 @@ export default function ItemCard({
           isHovered={isHovered}
           isFavorited={isFavorited}
           isOwnedByUser={isOwnedByUser}
-          isItemAvailable={isItemAvailable}
+          isItemAvailable={itemAvailable}
           isDashboard={isDashboard}
           isLoading={isLoading}
           validImages={validImages}
@@ -301,7 +290,7 @@ export default function ItemCard({
           onDelete={() => setIsDeleteDialogOpen(true)}
         />
 
-        {/* Item details component - using the existing component */}
+        {/* Item details component */}
         <ItemCardDetails item={item} itemId={itemId} type={type} />
 
         {/* Dashboard quick action buttons */}

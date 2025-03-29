@@ -1,3 +1,7 @@
+/**
+ * Displays the current status of a conversation
+ * Shows visual indicators for completed, cancelled, and ongoing conversations
+ */
 import React from "react";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";

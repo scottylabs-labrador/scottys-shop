@@ -1,11 +1,15 @@
+/**
+ * Profile information component for shop profiles
+ * Displays avatar and basic user information
+ */
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Camera, Calendar } from "lucide-react";
-import { ShopOwnerType } from "@/utils/ShopTypes";
+import { ShopOwner } from "@/utils/types";
 
 interface ProfileInfoProps {
-  shopOwner: ShopOwnerType | null;
+  shopOwner: ShopOwner | null;
   avatarUrl: string | null;
   isOwnShop: boolean;
   setUploadType: (type: "avatar" | "banner" | null) => void;
@@ -53,7 +57,7 @@ const ProfileInfo = ({
               </Button>
             )}
           </div>
-          <span className="font-semibold text-2xl text-gray-900  font-rubik">
+          <span className="font-semibold text-2xl text-gray-900 font-rubik">
             {shopOwner.andrewId}
           </span>
         </div>

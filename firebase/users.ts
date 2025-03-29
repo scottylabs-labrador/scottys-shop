@@ -1,3 +1,8 @@
+/**
+ * Firebase operations for user management
+ * Handles CRUD operations for the users collection
+ */
+
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -12,23 +17,26 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
+import { User } from "@/utils/types";
 
-// Base User interface
-export interface User {
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  andrewId: string;
-  clerkId: string;
-  stripeId?: string;
-  shopBanner?: string;
-  shopTitle?: string;
-  shopDescription?: string;
-  favorites: string[];
-  cart: string[];
-  conversations: string[]; // Array of conversation IDs
-  createdAt: number;
-}
+/**
+ * Firebase Collection: users
+ * {
+ *   name: string;
+ *   email: string;
+ *   avatarUrl?: string;
+ *   andrewId: string;
+ *   clerkId: string;
+ *   stripeId?: string;
+ *   shopBanner?: string;
+ *   shopTitle?: string;
+ *   shopDescription?: string;
+ *   favorites: string[];
+ *   cart: string[];
+ *   conversations: string[];
+ *   createdAt: number;
+ * }
+ */
 
 // User interface with ID
 export interface UserWithId extends User {
@@ -39,13 +47,15 @@ const usersCollection = collection(db, "users");
 
 // Create a new user
 export const createUser = async (
-  userData: Omit<User, "conversations">
+  userData: Omit<User, "conversations" | "favorites" | "cart">
 ): Promise<string> => {
   try {
-    // Add empty conversations array to new users
+    // Add empty arrays for collections
     const fullUserData: User = {
       ...userData,
       conversations: [],
+      favorites: [],
+      cart: [],
     };
 
     const docRef = await addDoc(usersCollection, fullUserData);
@@ -157,17 +167,9 @@ export const addToFavorites = async (
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      const favorites = userData.favorites || [];
-      if (!favorites.includes(itemId)) {
-        await updateDoc(userRef, {
-          favorites: [...favorites, itemId],
-        });
-      }
-    }
+    await updateDoc(userRef, {
+      favorites: arrayUnion(itemId),
+    });
   } catch (error) {
     console.error("Error adding to favorites:", error);
     throw error;
@@ -181,34 +183,28 @@ export const removeFromFavorites = async (
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      const favorites = userData.favorites || [];
-      await updateDoc(userRef, {
-        favorites: favorites.filter((id) => id !== itemId),
-      });
-    }
+    await updateDoc(userRef, {
+      favorites: arrayRemove(itemId),
+    });
   } catch (error) {
     console.error("Error removing from favorites:", error);
     throw error;
   }
 };
 
-// Check if item is in cart
-export const isItemInCart = async (
-  clerkId: string,
+// Check if item is in favorites
+export const isItemInFavorites = async (
+  userId: string,
   itemId: string
 ): Promise<boolean> => {
   try {
-    const userData = await getUserByClerkId(clerkId);
+    const userData = await getUserById(userId);
     if (userData) {
-      return userData.cart.includes(itemId);
+      return userData.favorites.includes(itemId);
     }
     return false;
   } catch (error) {
-    console.error("Error checking cart:", error);
+    console.error("Error checking favorites:", error);
     throw error;
   }
 };
@@ -220,17 +216,9 @@ export const addToCart = async (
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      const cart = userData.cart || [];
-      if (!cart.includes(itemId)) {
-        await updateDoc(userRef, {
-          cart: [...cart, itemId],
-        });
-      }
-    }
+    await updateDoc(userRef, {
+      cart: arrayUnion(itemId),
+    });
   } catch (error) {
     console.error("Error adding to cart:", error);
     throw error;
@@ -244,15 +232,9 @@ export const removeFromCart = async (
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      const cart = userData.cart || [];
-      await updateDoc(userRef, {
-        cart: cart.filter((id) => id !== itemId),
-      });
-    }
+    await updateDoc(userRef, {
+      cart: arrayRemove(itemId),
+    });
   } catch (error) {
     console.error("Error removing from cart:", error);
     throw error;

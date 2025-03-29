@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  MPITEM_STATUS,
+  ITEM_STATUS,
   ITEM_CATEGORIES,
   ITEM_CONDITIONS,
   ITEM_TYPE,
@@ -237,7 +237,7 @@ export default function CreateItemPage() {
           category: ITEM_CATEGORIES[category as keyof typeof ITEM_CATEGORIES],
           condition: ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS],
           tags: processedTags,
-          status: MPITEM_STATUS.AVAILABLE,
+          status: ITEM_STATUS.AVAILABLE,
           images: imageUrls,
           createdAt: Date.now(),
         };

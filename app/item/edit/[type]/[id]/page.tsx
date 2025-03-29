@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  MPITEM_STATUS,
+  ITEM_STATUS,
   ITEM_CATEGORIES,
   ITEM_CONDITIONS,
   ITEM_TYPE,
@@ -394,7 +394,7 @@ export default function EditItemPage() {
           tags: processedTags,
           images: combinedImageUrls,
           updatedAt: Date.now(),
-          status: MPITEM_STATUS.AVAILABLE, // Keep current status
+          status: ITEM_STATUS.AVAILABLE, // Keep current status
           type: ITEM_TYPE.MARKETPLACE, // Explicitly save the item type
         };
 

@@ -1,10 +1,12 @@
+/**
+ * Details section for item cards
+ * Displays item information including price, condition, etc.
+ */
 "use client";
 import Link from "next/link";
 import {
   ITEM_TYPE,
   ITEM_CONDITIONS,
-  getDisplayText,
-  getKeyFromValue,
   conditionColors,
 } from "@/utils/ItemConstants";
 
@@ -19,23 +21,21 @@ export default function ItemCardDetails({
   itemId,
   type,
 }: ItemCardDetailsProps) {
-  const isCommissionItem = (item: any): boolean => {
-    return "turnaroundDays" in item;
-  };
+  const isCommissionItem = "turnaroundDays" in item;
 
   // Render the condition badge consistently with ItemPage
   const renderConditionBadge = (condition: string) => {
     // First try to find if it's a key in ITEM_CONDITIONS
-    let displayText =
-      ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS];
+    let displayText: string =
+      ITEM_CONDITIONS[condition as keyof typeof ITEM_CONDITIONS] || "";
 
     // If not found (meaning the condition might be a value instead of a key)
     if (!displayText) {
       // Check if the condition is already a display value
       if (Object.values(ITEM_CONDITIONS).includes(condition as any)) {
-        displayText = condition as keyof typeof conditionColors;
+        displayText = condition;
       } else {
-        displayText = "Unknown" as keyof typeof conditionColors;
+        displayText = "Unknown";
       }
     }
 
@@ -70,7 +70,7 @@ export default function ItemCardDetails({
             ${item.price.toFixed(2)}
           </span>
           {/* Show turnaround days for commission items, condition for marketplace items */}
-          {isCommissionItem(item) ? (
+          {isCommissionItem ? (
             <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
               {item.turnaroundDays} {item.turnaroundDays === 1 ? "day" : "days"}
             </span>

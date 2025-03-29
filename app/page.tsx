@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/ItemConstants";
+import { ITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
 import { getMPItemsByStatus, type MPItemWithId } from "@/firebase/mpItems";
 import {
   getAvailableCommItems,
@@ -24,7 +24,7 @@ export default function Home() {
         let MPItems: MPItemWithId[] = [];
         let CommItems: CommItemWithId[] = [];
 
-        MPItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE); // determine how we want to handle this
+        MPItems = await getMPItemsByStatus(ITEM_STATUS.AVAILABLE); // determine how we want to handle this
         CommItems = await getAvailableCommItems();
 
         setMPItems(MPItems);

@@ -1,3 +1,7 @@
+/**
+ * Dashboard for managing shop items
+ * Allows shop owners to create, edit, and manage their items
+ */
 "use client";
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";

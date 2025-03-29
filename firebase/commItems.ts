@@ -1,3 +1,8 @@
+/**
+ * Firebase operations for commission items
+ * Handles CRUD operations for the commItems collection
+ */
+
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -13,31 +18,44 @@ import {
   limit,
   QueryConstraint,
 } from "firebase/firestore";
+import { CommissionItem } from "@/utils/types";
 
-interface CommItem {
-  sellerId: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  tags: string[];
-  turnaroundDays: number;
-  isAvailable: boolean;
-  images: string[];
-  createdAt: number;
-}
+/**
+ * Firebase Collection: commItems
+ * {
+ *   sellerId: string;
+ *   title: string;
+ *   description: string;
+ *   price: number;
+ *   category: string;
+ *   tags: string[];
+ *   turnaroundDays: number;
+ *   isAvailable: boolean;
+ *   images: string[];
+ *   createdAt: number;
+ * }
+ */
 
 // Add id to the type when returning from Firestore
-export interface CommItemWithId extends CommItem {
+export interface CommItemWithId extends CommissionItem {
   id: string;
 }
 
 const commItemsCollection = collection(db, "commItems");
 
 // Create a new commission item
-export const createCommItem = async (itemData: CommItem): Promise<string> => {
+export const createCommItem = async (
+  itemData: Omit<CommissionItem, "id">
+): Promise<string> => {
   try {
-    const docRef = await addDoc(commItemsCollection, itemData);
+    // Ensure isAvailable is set
+    const completeItemData = {
+      ...itemData,
+      isAvailable:
+        itemData.isAvailable !== undefined ? itemData.isAvailable : true,
+    };
+
+    const docRef = await addDoc(commItemsCollection, completeItemData);
     return docRef.id;
   } catch (error) {
     console.error("Error creating commission item:", error);
@@ -147,7 +165,7 @@ export const getAvailableCommItems = async (): Promise<CommItemWithId[]> => {
 // Update commission item
 export const updateCommItem = async (
   itemId: string,
-  updates: Partial<CommItem>
+  updates: Partial<CommissionItem>
 ): Promise<void> => {
   try {
     const itemRef = doc(commItemsCollection, itemId);

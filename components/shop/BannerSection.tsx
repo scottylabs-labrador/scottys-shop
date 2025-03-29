@@ -1,3 +1,7 @@
+/**
+ * Banner section for shop profiles
+ * Displays shop banner image with optional edit controls
+ */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, RotateCw } from "lucide-react";
@@ -36,10 +40,10 @@ export default function BannerSection({
           }}
           aria-label="Shop banner"
         />
-        
+
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        
+
         {/* Edit Controls */}
         {isOwnShop && (
           <>
@@ -51,7 +55,7 @@ export default function BannerSection({
                 </p>
               </div>
             </div>
-            
+
             <Button
               type="button"
               variant="outline"

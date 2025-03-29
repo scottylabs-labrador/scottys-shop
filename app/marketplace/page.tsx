@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ItemCard from "@/components/items/itemcard/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, MPITEM_STATUS } from "@/utils/ItemConstants";
+import { ITEM_TYPE, ITEM_STATUS } from "@/utils/ItemConstants";
 import {
   getMPItemsByStatus,
   getMPItemsByCategory,
@@ -58,7 +58,7 @@ export default function MarketplacePage() {
           );
         } else {
           // No filters, get all available items
-          filteredItems = await getMPItemsByStatus(MPITEM_STATUS.AVAILABLE);
+          filteredItems = await getMPItemsByStatus(ITEM_STATUS.AVAILABLE);
         }
 
         // Apply remaining filters in memory
@@ -76,7 +76,7 @@ export default function MarketplacePage() {
           }
 
           // Ensure we only show available items
-          matches = matches && item.status === MPITEM_STATUS.AVAILABLE;
+          matches = matches && item.status === ITEM_STATUS.AVAILABLE;
 
           return matches;
         });

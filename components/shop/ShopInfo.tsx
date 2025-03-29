@@ -1,8 +1,13 @@
+/**
+ * Shop information component
+ * Displays and allows editing of shop title and description
+ */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
+import { ShopFormData } from "@/utils/types";
 
 interface ShopInfoProps {
   shopTitle: string | null;
@@ -11,11 +16,7 @@ interface ShopInfoProps {
   isOwnShop: boolean;
   isEditing: boolean;
   isSaving: boolean;
-  formData: {
-    name: string;
-    title: string;
-    description: string;
-  };
+  formData: ShopFormData;
   handleInputChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => void;

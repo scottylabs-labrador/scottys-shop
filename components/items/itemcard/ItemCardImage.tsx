@@ -1,3 +1,7 @@
+/**
+ * Image component for item cards
+ * Displays the item image with status indicators and action buttons
+ */
 "use client";
 
 import { useState } from "react";

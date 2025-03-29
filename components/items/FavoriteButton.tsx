@@ -1,5 +1,9 @@
+/**
+ * Button component for toggling favorite status of items
+ * Provides visual feedback when adding/removing items from favorites
+ */
 "use client";
-// CLAUDE IS THE GOAT!
+
 import { useState } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,17 +37,17 @@ export default function FavoriteButton({
 
   return (
     <button
-      type="button" // Explicitly add button type
+      type="button"
       className={cn(
         "relative p-2 rounded-full bg-white shadow-md transition-all duration-200",
         "hover:bg-gray-200 active:scale-90 disabled:opacity-50",
-        isLoading ? "cursor-not-allowed" : "cursor-pointer", // Explicitly set cursor
+        isLoading ? "cursor-not-allowed" : "cursor-pointer",
         className
       )}
       onClick={handleClick}
       disabled={isLoading}
       aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-      style={{ pointerEvents: isLoading ? "none" : "auto" }} // Ensure pointer events work
+      style={{ pointerEvents: isLoading ? "none" : "auto" }}
     >
       {/* Heart icon */}
       <Heart
