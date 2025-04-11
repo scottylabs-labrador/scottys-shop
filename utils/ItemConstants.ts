@@ -61,3 +61,17 @@ export const conditionColors = {
   [ITEM_CONDITIONS.GOOD]: "bg-yellow-100 text-yellow-700",
   [ITEM_CONDITIONS.FAIR]: "bg-orange-100 text-orange-700",
 };
+
+/**
+ * Type for combined item data with type information
+ * This represents either a marketplace or commission item with a standardized type field
+ */
+export type ItemWithType = {
+  id: string;
+  sellerId: string;
+  title: string;
+  description?: string;
+  price: number;
+  images: string[];
+  type: typeof ITEM_TYPE.COMMISSION | typeof ITEM_TYPE.MARKETPLACE;
+};

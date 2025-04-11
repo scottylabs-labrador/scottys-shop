@@ -3,7 +3,25 @@
  * Provides consistent handling of conversation states throughout the application
  */
 
-import { createConstants, createConstantHelpers } from "./constants";
+import { createConstants, createConstantHelpers } from "@/utils/constants";
+import { ItemWithType } from "@/utils/ItemConstants";
+import { UserWithId } from "@/firebase/users";
+
+/**
+ * Lookup object that maps item IDs to their data
+ * Allows for fast O(1) access to items by their ID without searching arrays
+ */
+export interface ItemsDataRecord {
+  [key: string]: ItemWithType;
+}
+
+/**
+ * Lookup object that maps user IDs to their data
+ * Allows for quick rendering of conversations
+ */
+export interface UsersDataRecord {
+  [key: string]: UserWithId;
+}
 
 // Conversation status constants
 export const CONVERSATION_STATUS = createConstants({
@@ -13,10 +31,10 @@ export const CONVERSATION_STATUS = createConstants({
   SELLER_CANCELLED: "sellercancelled",
 });
 
-// Conversation type constants
-export const CONVERSATION_TYPE = createConstants({
-  DIRECT: "direct", // Direct messaging between users
-  ITEM: "item", // Conversation about an item
+export const PREVIEW_STATUS = createConstants({
+  READ: "read",
+  UNREAD: "unread",
+  ACTIVE: "active",
 });
 
 // Message status constants
@@ -30,7 +48,6 @@ export const MESSAGE_STATUS = createConstants({
 // Helper functions
 export const conversationStatusHelpers =
   createConstantHelpers(CONVERSATION_STATUS);
-export const conversationTypeHelpers = createConstantHelpers(CONVERSATION_TYPE);
 export const messageStatusHelpers = createConstantHelpers(MESSAGE_STATUS);
 
 // Colors for different conversation status values
@@ -39,12 +56,6 @@ export const statusColors = {
   [CONVERSATION_STATUS.COMPLETED]: "bg-green-100 text-green-700",
   [CONVERSATION_STATUS.BUYER_CANCELLED]: "bg-red-100 text-red-700",
   [CONVERSATION_STATUS.SELLER_CANCELLED]: "bg-orange-100 text-orange-700",
-};
-
-// Colors for different conversation types
-export const typeColors = {
-  [CONVERSATION_TYPE.DIRECT]: "bg-gray-100 text-gray-700",
-  [CONVERSATION_TYPE.ITEM]: "bg-indigo-100 text-indigo-700",
 };
 
 // Status badges with descriptive text

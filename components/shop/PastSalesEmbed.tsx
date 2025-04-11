@@ -17,40 +17,25 @@ import {
 } from "@/firebase/users";
 import { getMPItemById } from "@/firebase/mpItems";
 import { getCommItemById } from "@/firebase/commItems";
-import { CONVERSATION_STATUS } from "@/utils/ConversationConstants";
+import {
+  CONVERSATION_STATUS,
+  PREVIEW_STATUS,
+  UsersDataRecord,
+  ItemsDataRecord,
+} from "@/utils/ConversationConstants";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
 import ConversationPreview from "@/components/conversations/ConversationPreview";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { DollarSign, Calendar, AlertTriangle } from "lucide-react";
+import { Calendar, AlertTriangle } from "lucide-react";
 import { formatPrice } from "@/utils/helpers";
-
-// Type for combined item data with type information
-type ItemWithType = {
-  id: string;
-  sellerId: string;
-  title: string;
-  description?: string;
-  price: number;
-  images: string[];
-  type: "marketplace" | "commission";
-};
-
-// Type for items data record
-interface ItemsDataRecord {
-  [key: string]: ItemWithType;
-}
-
-// Type for participant users record
-interface ParticipantUsersRecord {
-  [key: string]: UserWithId;
-}
+import { ITEM_TYPE } from "@/utils/ItemConstants";
 
 // Helper function to get other participant in a conversation
 const getOtherParticipant = (
   conversation: ConversationWithId,
   userFirebaseId: string | null,
-  participantUsers: ParticipantUsersRecord
+  participantUsers: UsersDataRecord
 ): UserWithId | null => {
   if (!userFirebaseId || !conversation.participants) return null;
 
@@ -72,8 +57,7 @@ export default function PastSalesEmbed() {
     []
   );
   const [userFirebaseId, setUserFirebaseId] = useState<string | null>(null);
-  const [participantUsers, setParticipantUsers] =
-    useState<ParticipantUsersRecord>({});
+  const [participantUsers, setParticipantUsers] = useState<UsersDataRecord>({});
   const [itemsData, setItemsData] = useState<ItemsDataRecord>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +127,7 @@ export default function PastSalesEmbed() {
             });
 
             // Fetch all participant users' data
-            const users: ParticipantUsersRecord = {};
+            const users: UsersDataRecord = {};
             await Promise.all(
               Array.from(participantIds).map(async (id) => {
                 try {
@@ -169,15 +153,15 @@ export default function PastSalesEmbed() {
                     if (!conv.itemId) return;
 
                     // Determine item type
-                    const itemType = conv.itemType || "marketplace"; // Default to marketplace if not specified
+                    const itemType = conv.itemType || ITEM_TYPE.MARKETPLACE; // Default to marketplace if not specified
 
                     // Fetch the appropriate item
-                    if (itemType === "commission") {
+                    if (itemType === ITEM_TYPE.COMMISSION) {
                       const itemData = await getCommItemById(conv.itemId);
                       if (itemData) {
                         items[conv.itemId] = {
                           ...itemData,
-                          type: "commission" as const,
+                          type: ITEM_TYPE.COMMISSION,
                         };
                       }
                     } else {
@@ -185,7 +169,7 @@ export default function PastSalesEmbed() {
                       if (itemData) {
                         items[conv.itemId] = {
                           ...itemData,
-                          type: "marketplace" as const,
+                          type: ITEM_TYPE.MARKETPLACE,
                         };
                       }
                     }
@@ -372,7 +356,7 @@ export default function PastSalesEmbed() {
               )}
               item={conversation.itemId ? itemsData[conversation.itemId] : null}
               userFirebaseId={userFirebaseId}
-              disableLink={false}
+              state={PREVIEW_STATUS.UNREAD}
             />
           ))}
       </div>

@@ -124,7 +124,7 @@ const MobileMenu = ({
               Favorites
             </Link>
             <Link
-              href="/messages"
+              href="/conversations"
               className="text-black font-rubik font-semibold p-3 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Messages
@@ -366,8 +366,8 @@ const Header = () => {
                 <Heart className="w-6 h-6 group-hover:text-[#C41230]" />
               </Link>
               <Link
-                href="/messages"
-                title="Messages"
+                href="/conversations"
+                title="Conversations"
                 className="p-2 hover:bg-gray-100 rounded-full group"
               >
                 <MessageCircle className="w-6 h-6 group-hover:text-[#C41230]" />

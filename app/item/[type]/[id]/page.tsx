@@ -281,7 +281,7 @@ export default function ItemPage() {
 
     // If the user already has a conversation about this item, navigate to it
     if (existingConversationId) {
-      router.push(`/messages/conversation/${existingConversationId}`);
+      router.push(`/conversations/${existingConversationId}`);
       return;
     }
 
@@ -301,7 +301,6 @@ export default function ItemPage() {
         seller.id,
         params.id,
         isCommissionType ? "commission" : "marketplace",
-        item.title,
         initialMessage
       );
 
@@ -311,7 +310,7 @@ export default function ItemPage() {
       });
 
       // Navigate to the conversation
-      router.push(`/messages/conversation/${conversationId}`);
+      router.push(`/conversations/${conversationId}`);
     } catch (error) {
       console.error("Error creating conversation:", error);
       toast({
@@ -544,9 +543,7 @@ export default function ItemPage() {
                   // Direct navigation to existing conversation
                   <Button
                     onClick={() =>
-                      router.push(
-                        `/messages/conversation/${existingConversationId}`
-                      )
+                      router.push(`/conversations/${existingConversationId}`)
                     }
                     className="w-full font-bold bg-blue-600 hover:bg-blue-700"
                     size="lg"
@@ -573,7 +570,9 @@ export default function ItemPage() {
                         const initialMessage = canPurchase
                           ? getItemPurchaseMessageTemplate(
                               item.title,
-                              isCommissionType ? "commission" : "marketplace"
+                              isCommissionType
+                                ? ITEM_TYPE.COMMISSION
+                                : ITEM_TYPE.MARKETPLACE
                             )
                           : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
 
@@ -583,8 +582,9 @@ export default function ItemPage() {
                             userFirebaseId,
                             seller.id,
                             params.id,
-                            isCommissionType ? "commission" : "marketplace",
-                            item.title,
+                            isCommissionType
+                              ? ITEM_TYPE.COMMISSION
+                              : ITEM_TYPE.MARKETPLACE,
                             initialMessage
                           );
 
@@ -595,7 +595,7 @@ export default function ItemPage() {
                         });
 
                         // Navigate to the conversation
-                        router.push(`/messages/conversation/${conversationId}`);
+                        router.push(`/conversations/${conversationId}`);
                       } catch (error) {
                         console.error("Error creating conversation:", error);
                         toast({

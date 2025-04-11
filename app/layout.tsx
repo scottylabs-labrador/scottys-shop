@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/nav/Header";
 import Banner from "@/components/nav/Banner";
 import SyncUserWithFirebase from "@/components/SyncUserWithFirebase";
+import { MessageNotificationsProvider } from "@/hooks/NotificationContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -48,14 +49,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${rubik.variable} ${caladea.variable} antialiased relative`}
       >
         <ClerkProvider>
-          <SyncUserWithFirebase />
-          <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0">
-            <div className="fixed top-0 w-full z-[100]">
-              <Banner />
-              <Header />
-            </div>
-            <div className="max-w-8xl mx-auto px-3">{children}</div>
-          </main>
+          <MessageNotificationsProvider>
+            <SyncUserWithFirebase />
+            <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0 overscroll-none">
+              <div className="fixed top-0 w-full z-[100]">
+                <Banner />
+                <Header />
+              </div>
+              <div className="max-w-8xl mx-auto px-3">{children}</div>
+            </main>
+          </MessageNotificationsProvider>
         </ClerkProvider>
       </body>
     </html>

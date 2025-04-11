@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, X, FileImage, Check, AlertCircle } from "lucide-react";
+import { Upload, X, FileImage, Check, AlertCircle, Router } from "lucide-react";
 import { storage } from "@/firebase/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { useRouter } from "next/router";
 
 interface ImageUploadModalProps {
   isOpen: boolean;

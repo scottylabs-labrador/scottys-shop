@@ -5,6 +5,7 @@
 import React from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { ITEM_TYPE } from "@/utils/ItemConstants";
 import { Badge } from "@/components/ui/badge";
 import { Tag, Clock } from "lucide-react";
 
@@ -20,7 +21,7 @@ interface ItemWithId {
 
 interface ItemPreviewProps {
   item: ItemWithId;
-  itemType: "marketplace" | "commission";
+  itemType: (typeof ITEM_TYPE)[keyof typeof ITEM_TYPE];
 }
 
 const ItemPreview: React.FC<ItemPreviewProps> = ({ item, itemType }) => {

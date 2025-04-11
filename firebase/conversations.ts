@@ -23,13 +23,14 @@ import {
   addConversationToUser,
   removeConversationFromUser,
 } from "@/firebase/users";
+import { ITEM_TYPE } from "@/utils/ItemConstants";
 
 /**
  * Firebase Collection: conversations
  * {
  *   participants: string[]; // Array of user IDs participating in the conversation
  *   itemId?: string; // Optional item ID that the conversation is about
- *   itemType?: string; // 'commission' or 'marketplace'
+ *   itemType?: typeof ITEM_TYPE[keyof typeof ITEM_TYPE]; // ITEM_TYPE.MARKETPLACE or ITEM_TYPE.COMMISSION
  *   lastMessageTimestamp: number;
  *   lastMessageText: string;
  *   lastMessageSenderId: string;
@@ -325,7 +326,7 @@ export const addMessageToConversation = async (
 // Get messages for a conversation
 export const getMessagesForConversation = async (
   conversationId: string,
-  limitCount: number = 50
+  limitCount: number = 100
 ): Promise<MessageWithId[]> => {
   try {
     const messagesCollection = collection(
@@ -408,8 +409,7 @@ export const createItemPurchaseConversation = async (
   buyerId: string,
   sellerId: string,
   itemId: string,
-  itemType: string,
-  itemTitle: string,
+  itemType: (typeof ITEM_TYPE)[keyof typeof ITEM_TYPE],
   initialMessage: string
 ): Promise<string> => {
   try {
@@ -491,9 +491,8 @@ export const getUnreadMessageCount = async (
 // Get a default message template for item purchase
 export const getItemPurchaseMessageTemplate = (
   itemTitle: string,
-  itemType: string
+  itemType: (typeof ITEM_TYPE)[keyof typeof ITEM_TYPE]
 ): string => {
-  const itemTypeFormatted =
-    itemType === "commission" ? "commission" : "product";
+  const itemTypeFormatted = itemType === "commission" ? "commission" : "item";
   return `Hi! I'm interested in purchasing "${itemTitle}"`;
 };
