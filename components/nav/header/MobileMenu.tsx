@@ -9,7 +9,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { SignedIn } from "@clerk/nextjs";
-import IconButton from "./IconButton";
+import IconButton from "@/components/nav/header/IconButton";
 
 // Navigation items for menu
 const NAVIGATION_ITEMS = ["commissions", "marketplace", "requests"];

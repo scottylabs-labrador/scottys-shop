@@ -1,9 +1,8 @@
 /**
- * CustomProfileDropdown component
+ * ProfileDropdown component
  * User profile dropdown with account options and sign out
  */
 "use client";
-
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
@@ -15,23 +14,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getUserByClerkId, type UserWithId } from "@/firebase/users";
+import { User } from "@/utils/types";
 
-const CustomProfileDropdown = () => {
+const ProfileDropdown = () => {
   const { signOut, user } = useClerk();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [userData, setUserData] = useState<UserWithId | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
 
-  // Fetch user data from Firebase
+  // Fetch user data via secure API
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.id) return;
 
       try {
-        const fbUser = await getUserByClerkId(user.id);
-        if (fbUser) {
-          setUserData(fbUser);
-          setAvatarUrl(fbUser.avatarUrl || user.imageUrl || null);
+        const response = await fetch("/api/users/current", { method: "POST" });
+        if (response.ok) {
+          const userData: User = await response.json();
+          setUserData(userData);
+          setAvatarUrl(userData.avatarUrl || user.imageUrl || null);
         } else {
           setAvatarUrl(user.imageUrl || null);
         }
@@ -99,4 +99,4 @@ const CustomProfileDropdown = () => {
   );
 };
 
-export default CustomProfileDropdown;
+export default ProfileDropdown;

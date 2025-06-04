@@ -3,12 +3,12 @@
  * Used by both marketplace items and commission items for consistent state management
  */
 
-import { createConstants, createConstantHelpers } from "./constants";
+import { createConstants } from "@/utils/constantsHelper";
+import { AndrewID, ItemID } from "./types";
 
 // Item status constants
 export const ITEM_STATUS = createConstants({
   AVAILABLE: "Available",
-  PENDING: "Pending",
   SOLD: "Sold",
 });
 
@@ -35,16 +35,9 @@ export const ITEM_CONDITIONS = createConstants({
   FAIR: "Fair",
 });
 
-// Helper functions for consistent handling
-export const itemStatusHelpers = createConstantHelpers(ITEM_STATUS);
-export const itemTypeHelpers = createConstantHelpers(ITEM_TYPE);
-export const itemCategoryHelpers = createConstantHelpers(ITEM_CATEGORIES);
-export const itemConditionHelpers = createConstantHelpers(ITEM_CONDITIONS);
-
 // Colors for different status values
 export const statusColors = {
   [ITEM_STATUS.AVAILABLE]: "bg-green-100 text-green-700",
-  [ITEM_STATUS.PENDING]: "bg-yellow-100 text-yellow-700",
   [ITEM_STATUS.SOLD]: "bg-red-100 text-red-700",
 };
 
@@ -67,8 +60,8 @@ export const conditionColors = {
  * This represents either a marketplace or commission item with a standardized type field
  */
 export type ItemWithType = {
-  id: string;
-  sellerId: string;
+  id: ItemID;
+  sellerId: AndrewID;
   title: string;
   description?: string;
   price: number;

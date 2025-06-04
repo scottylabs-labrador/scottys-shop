@@ -7,7 +7,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import SearchBar from "@/components/search/SearchBar";
-import IconButton from "./IconButton";
+import IconButton from "@/components/nav/header/IconButton";
 
 interface MobileSearchProps {
   isOpen: boolean;

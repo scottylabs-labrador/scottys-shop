@@ -6,10 +6,10 @@ import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Camera, Calendar } from "lucide-react";
-import { ShopOwner } from "@/utils/types";
+import { User } from "@/utils/types";
 
 interface ProfileInfoProps {
-  shopOwner: ShopOwner | null;
+  shopOwner: User | null;
   avatarUrl: string | null;
   isOwnShop: boolean;
   setUploadType: (type: "avatar" | "banner" | null) => void;
@@ -38,11 +38,11 @@ const ProfileInfo = ({
             <Avatar className="w-[115px] h-[115px] rounded-full border-[3px] border-black">
               <AvatarImage
                 src={avatarUrl || ""}
-                alt={shopOwner.name}
+                alt={shopOwner.username}
                 className="object-cover"
               />
               <AvatarFallback className="text-2xl font-medium">
-                {shopOwner.name.charAt(0).toUpperCase()}
+                {shopOwner.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {isOwnShop && (

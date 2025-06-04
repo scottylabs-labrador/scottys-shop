@@ -1,9 +1,10 @@
-/**
+/** commItems.ts
  * Firebase operations for commission items
  * Handles CRUD operations for the commItems collection
  */
 
 import { db } from "@/firebase/firebase";
+import { getStorage, ref, deleteObject } from "firebase/storage";
 import {
   collection,
   doc,
@@ -18,18 +19,17 @@ import {
   limit,
   QueryConstraint,
 } from "firebase/firestore";
-import { CommissionItem } from "@/utils/types";
+import { AndrewID, CommissionItem, FirebaseID, ItemID } from "@/utils/types";
 
 /**
  * Firebase Collection: commItems
  * {
- *   sellerId: string;
+ *   sellerId: AndrewID;
  *   title: string;
  *   description: string;
  *   price: number;
  *   category: string;
  *   tags: string[];
- *   turnaroundDays: number;
  *   isAvailable: boolean;
  *   images: string[];
  *   createdAt: number;
@@ -38,15 +38,45 @@ import { CommissionItem } from "@/utils/types";
 
 // Add id to the type when returning from Firestore
 export interface CommItemWithId extends CommissionItem {
-  id: string;
+  id: ItemID;
 }
 
 const commItemsCollection = collection(db, "commItems");
+const storage = getStorage();
+
+// Helper function to delete image from Firebase Storage
+const deleteImageFromStorage = async (imageUrl: string): Promise<void> => {
+  try {
+    // Extract the path from the Firebase Storage URL
+    const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
+    if (imageUrl.includes(baseUrl)) {
+      // Parse the URL to get the file path
+      const urlParts = imageUrl.split(baseUrl)[1];
+      const bucketAndPath = urlParts.split("/o/")[1];
+      const filePath = decodeURIComponent(bucketAndPath.split("?")[0]);
+
+      const imageRef = ref(storage, filePath);
+      await deleteObject(imageRef);
+      console.log("Image deleted from storage:", filePath);
+    }
+  } catch (error) {
+    // Don't throw error for image deletion failures to avoid breaking the main operation
+    console.error("Error deleting image from storage:", error);
+  }
+};
+
+// Helper function to delete multiple images from Firebase Storage
+export const deleteImagesFromStorage = async (
+  imageUrls: string[]
+): Promise<void> => {
+  const deletionPromises = imageUrls.map((url) => deleteImageFromStorage(url));
+  await Promise.allSettled(deletionPromises); // Use allSettled to continue even if some fail
+};
 
 // Create a new commission item
 export const createCommItem = async (
   itemData: Omit<CommissionItem, "id">
-): Promise<string> => {
+): Promise<ItemID> => {
   try {
     // Ensure isAvailable is set
     const completeItemData = {
@@ -56,7 +86,7 @@ export const createCommItem = async (
     };
 
     const docRef = await addDoc(commItemsCollection, completeItemData);
-    return docRef.id;
+    return docRef.id as ItemID;
   } catch (error) {
     console.error("Error creating commission item:", error);
     throw error;
@@ -65,13 +95,13 @@ export const createCommItem = async (
 
 // Get a commission item by ID
 export const getCommItemById = async (
-  itemId: string
+  itemId: ItemID
 ): Promise<CommItemWithId | null> => {
   try {
     const itemDoc = await getDoc(doc(commItemsCollection, itemId));
     if (itemDoc.exists()) {
       return {
-        id: itemDoc.id,
+        id: itemDoc.id as ItemID,
         ...itemDoc.data(),
       } as CommItemWithId;
     }
@@ -84,14 +114,14 @@ export const getCommItemById = async (
 
 // Get commission items by seller
 export const getCommItemsBySeller = async (
-  sellerId: string
+  sellerId: AndrewID
 ): Promise<CommItemWithId[]> => {
   try {
     const q = query(commItemsCollection, where("sellerId", "==", sellerId));
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
+      id: doc.id as ItemID,
       ...doc.data(),
     })) as CommItemWithId[];
   } catch (error) {
@@ -113,7 +143,7 @@ export const getCommItemsByCategory = async (
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
+      id: doc.id as ItemID,
       ...doc.data(),
     })) as CommItemWithId[];
   } catch (error) {
@@ -137,7 +167,7 @@ export const getCommItemsByPriceRange = async (
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
+      id: doc.id as ItemID,
       ...doc.data(),
     })) as CommItemWithId[];
   } catch (error) {
@@ -153,7 +183,7 @@ export const getAvailableCommItems = async (): Promise<CommItemWithId[]> => {
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
+      id: doc.id as ItemID,
       ...doc.data(),
     })) as CommItemWithId[];
   } catch (error) {
@@ -164,7 +194,7 @@ export const getAvailableCommItems = async (): Promise<CommItemWithId[]> => {
 
 // Update commission item
 export const updateCommItem = async (
-  itemId: string,
+  itemId: ItemID,
   updates: Partial<CommissionItem>
 ): Promise<void> => {
   try {
@@ -176,9 +206,18 @@ export const updateCommItem = async (
   }
 };
 
-// Delete commission item
-export const deleteCommItem = async (itemId: string): Promise<void> => {
+// Delete commission item (with image cleanup)
+export const deleteCommItem = async (itemId: ItemID): Promise<void> => {
   try {
+    // First get the item to access its images
+    const itemData = await getCommItemById(itemId);
+
+    if (itemData && itemData.images && itemData.images.length > 0) {
+      // Delete all associated images from storage
+      await deleteImagesFromStorage(itemData.images);
+    }
+
+    // Then delete the document
     await deleteDoc(doc(commItemsCollection, itemId));
   } catch (error) {
     console.error("Error deleting commission item:", error);
@@ -188,7 +227,7 @@ export const deleteCommItem = async (itemId: string): Promise<void> => {
 
 // Update item availability
 export const updateCommItemAvailability = async (
-  itemId: string,
+  itemId: ItemID,
   isAvailable: boolean
 ): Promise<void> => {
   try {
@@ -215,33 +254,11 @@ export const getLatestCommItems = async (
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
+      id: doc.id as ItemID,
       ...doc.data(),
     })) as CommItemWithId[];
   } catch (error) {
     console.error("Error getting latest items:", error);
-    throw error;
-  }
-};
-
-// Get commission items by turnaround time
-export const getCommItemsByTurnaroundTime = async (
-  maxDays: number
-): Promise<CommItemWithId[]> => {
-  try {
-    const q = query(
-      commItemsCollection,
-      where("turnaroundDays", "<=", maxDays),
-      where("isAvailable", "==", true)
-    );
-    const querySnapshot = await getDocs(q);
-
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as CommItemWithId[];
-  } catch (error) {
-    console.error("Error getting items by turnaround time:", error);
     throw error;
   }
 };

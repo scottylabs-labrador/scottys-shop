@@ -5,9 +5,10 @@
 import React from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_TYPE } from "@/utils/itemConstants";
 import { Badge } from "@/components/ui/badge";
 import { Tag, Clock } from "lucide-react";
+import { ConditionBadge } from "./ItemBadges";
 
 // Type for item which can be either a marketplace item or commission item
 interface ItemWithId {
@@ -35,14 +36,6 @@ const ItemPreview: React.FC<ItemPreviewProps> = ({ item, itemType }) => {
 
   // Determine category
   const categoryDisplay = item.category || "Uncategorized";
-
-  // Determine secondary info based on item type
-  const secondaryInfo =
-    itemType === "commission"
-      ? `${item.turnaroundDays} day${
-          item.turnaroundDays !== 1 ? "s" : ""
-        } turnaround`
-      : `Condition: ${item.condition}`;
 
   return (
     <Card className="mt-2 mb-4 overflow-hidden border border-gray-200 hover:border-blue-400 transition-all duration-300 hover:shadow-lg group">
@@ -86,8 +79,9 @@ const ItemPreview: React.FC<ItemPreviewProps> = ({ item, itemType }) => {
               </div>
 
               <div className="flex items-center mt-1.5 text-xs text-gray-600">
-                <Clock className="h-3 w-3 mr-1.5" />
-                <span>{secondaryInfo}</span>
+                {itemType === "Marketplace" && (
+                  <ConditionBadge condition={item.condition} />
+                )}
               </div>
 
               <p className="text-sm font-semibold text-blue-600 mt-2">

@@ -1,15 +1,20 @@
-/**
+/** types.ts
  * Shared type definitions used across the application
  * These types provide consistent interfaces for data objects
  */
+import { ITEM_STATUS } from "@/utils/itemConstants";
 
-import { ITEM_STATUS } from "./ItemConstants";
-import { CONVERSATION_STATUS } from "./ConversationConstants";
+// ID types for type safety
+export type ClerkID = string & { readonly __brand: unique symbol };
+export type FirebaseID = string & { readonly __brand: unique symbol };
+export type AndrewID = string & { readonly __brand: unique symbol };
+export type ItemID = string & { readonly __brand: unique symbol };
+export type ChatID = string & { readonly __brand: unique symbol };
 
 // Item types
 export interface BaseItem {
-  id: string;
-  sellerId: string;
+  id: ItemID;
+  sellerId: AndrewID;
   title: string;
   description: string;
   price: number;
@@ -26,77 +31,79 @@ export interface MarketplaceItem extends BaseItem {
 
 export interface CommissionItem extends BaseItem {
   isAvailable: boolean;
-  turnaroundDays: number;
+}
+
+// Interface for shop items (both marketplace and commission types)
+export interface ShopItem {
+  id: ItemID;
+  type: "MARKETPLACE" | "COMMISSION";
+  price: number;
+  category: string;
+  condition?: string;
 }
 
 // User-related types
 export interface UserBase {
-  name: string;
+  username: string;
   email: string;
   avatarUrl?: string;
-  andrewId: string;
-  clerkId: string;
+  andrewId: AndrewID;
+  clerkId: ClerkID;
   createdAt: number;
 }
 
 export interface User extends UserBase {
-  stripeId?: string;
   shopBanner?: string;
   shopTitle?: string;
   shopDescription?: string;
-  favorites: string[];
-  cart: string[];
-  conversations: string[];
+  starRating: number;
+  paypalUsername?: string;
+  venmoUsername?: string;
+  zelleUsername?: string;
+  cashappUsername?: string;
+  favorites: ItemID[];
 }
 
-export interface ShopOwner extends User {
-  _id: string; // Compatibility with existing code
+// Safe user data to expose to client
+export interface SafeUserData {
+  andrewId: AndrewID;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+  shopBanner?: string;
+  shopTitle?: string;
+  shopDescription?: string;
+  starRating: number;
+  paypalUsername?: string;
+  venmoUsername?: string;
+  zelleUsername?: string;
+  cashappUsername?: string;
+  createdAt: number;
 }
 
 export interface ShopFormData {
-  name: string;
+  username: string;
   title: string;
   description: string;
 }
 
-// Conversation and messaging types
-export interface Message {
-  id?: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  isRead: boolean;
-  createdAt: number;
-}
-
-export interface Conversation {
-  id?: string;
-  participants: string[];
-  itemId?: string;
-  itemType?: string;
-  lastMessageTimestamp: number;
-  lastMessageText: string;
-  lastMessageSenderId: string;
-  createdAt: number;
-  status: (typeof CONVERSATION_STATUS)[keyof typeof CONVERSATION_STATUS];
-}
+// Conversation and messaging types - removed for future implementation
 
 // For combined search results
 export interface SearchResult {
-  id: string;
+  id: ItemID;
   type: "marketplace" | "commission";
   title: string;
   description: string;
   price: number;
   category: string;
-  sellerId: string;
+  sellerId: AndrewID;
   images: string[];
   createdAt: number;
   // Marketplace specific
   status?: string;
   condition?: string;
   // Commission specific
-  turnaroundDays?: number;
   isAvailable?: boolean;
   tags: string[];
 }
@@ -106,6 +113,5 @@ export interface SearchFilters {
   maxPrice?: number;
   category?: string;
   condition?: string;
-  maxTurnaroundDays?: number;
   type?: string;
 }

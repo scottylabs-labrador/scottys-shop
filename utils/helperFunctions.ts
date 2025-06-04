@@ -1,4 +1,4 @@
-/**
+/** helperFunctions.ts
  * Shared utility functions for the application
  * Contains common formatting and data transformation helpers
  */

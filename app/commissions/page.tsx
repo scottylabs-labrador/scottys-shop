@@ -2,57 +2,79 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import ItemCard from "@/components/items/itemcard/ItemCard";
+import { useUser } from "@clerk/nextjs";
+import ItemCard from "@/components/items/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_TYPE } from "@/utils/itemConstants";
 import {
   getAvailableCommItems,
   getCommItemsByCategory,
   getCommItemsByPriceRange,
-  getCommItemsByTurnaroundTime,
   type CommItemWithId,
 } from "@/firebase/commItems";
+import { User } from "@/utils/types";
 
 interface FilterState {
   minPrice?: number;
   maxPrice?: number;
   category?: string;
   condition?: string;
-  maxTurnaroundDays?: number;
 }
 
 export default function CommissionsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isLoaded } = useUser(); // Add isLoaded here
   const [items, setItems] = useState<CommItemWithId[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true); // Add separate user loading state
 
-  // Initialize filters from URL parameters
   const [filters, setFilters] = useState<FilterState>(() => {
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     const category = searchParams.get("category");
-    const maxTurnaroundDays = searchParams.get("maxTurnaroundDays");
 
     return {
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       category: category || undefined,
-      maxTurnaroundDays: maxTurnaroundDays
-        ? Number(maxTurnaroundDays)
-        : undefined,
     };
   });
 
-  // Fetch items based on current filters
+  // Fetch current user data
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (!user?.id) {
+        setUserLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/users/current", { method: "POST" });
+        if (response.ok) {
+          const userData: User = await response.json();
+          setCurrentUser(userData);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchCurrentUser();
+    }
+  }, [user?.id, isLoaded]);
+
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
       try {
         let filteredItems: CommItemWithId[] = [];
 
-        // Apply filters in order of specificity
         if (filters.category) {
           filteredItems = await getCommItemsByCategory(filters.category);
         } else if (
@@ -63,16 +85,10 @@ export default function CommissionsPage() {
             filters.minPrice,
             filters.maxPrice
           );
-        } else if (filters.maxTurnaroundDays) {
-          filteredItems = await getCommItemsByTurnaroundTime(
-            filters.maxTurnaroundDays
-          );
         } else {
-          // No filters, get all available items
           filteredItems = await getAvailableCommItems();
         }
 
-        // Apply remaining filters in memory
         filteredItems = filteredItems.filter((item) => {
           let matches = true;
 
@@ -82,11 +98,6 @@ export default function CommissionsPage() {
           if (filters.maxPrice !== undefined) {
             matches = matches && item.price <= filters.maxPrice;
           }
-          if (filters.maxTurnaroundDays !== undefined) {
-            matches =
-              matches && item.turnaroundDays <= filters.maxTurnaroundDays;
-          }
-
           return matches;
         });
 
@@ -100,9 +111,8 @@ export default function CommissionsPage() {
     };
 
     fetchItems();
-  }, [filters]);
+  }, [filters.minPrice, filters.maxPrice, filters.category]);
 
-  // Update URL when filters change
   const handleFilterChange = (newFilters: FilterState) => {
     const params = new URLSearchParams();
 
@@ -111,16 +121,14 @@ export default function CommissionsPage() {
     if (newFilters.maxPrice)
       params.set("maxPrice", newFilters.maxPrice.toString());
     if (newFilters.category) params.set("category", newFilters.category);
-    if (newFilters.maxTurnaroundDays) {
-      params.set("maxTurnaroundDays", newFilters.maxTurnaroundDays.toString());
-    }
 
     const newUrl = params.toString() ? `?${params.toString()}` : "";
     router.push(newUrl);
     setFilters(newFilters);
   };
 
-  if (loading) return <Loading />;
+  // Wait for both items and user data to load
+  if (loading || userLoading || !isLoaded) return <Loading />;
 
   return (
     <div className="flex flex-col max-w-8xl mx-auto px-[125px] py-6">
@@ -138,6 +146,8 @@ export default function CommissionsPage() {
               key={item.id}
               itemId={item.id}
               type={ITEM_TYPE.COMMISSION}
+              itemData={item}
+              currentUser={currentUser}
             />
           ))}
           {items.length === 0 && (

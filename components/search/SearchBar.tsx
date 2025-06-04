@@ -10,8 +10,8 @@ import { Search, X, Loader2 } from "lucide-react";
 import { searchItems } from "@/firebase/searchService";
 import { SearchResult } from "@/utils/types";
 import Image from "next/image";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
-import { formatPrice } from "@/utils/helpers";
+import { ITEM_TYPE } from "@/utils/itemConstants";
+import { formatPrice } from "@/utils/helperFunctions";
 
 const SearchBar = () => {
   const [query, setQuery] = useState("");

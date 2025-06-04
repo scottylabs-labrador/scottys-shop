@@ -3,29 +3,24 @@
  * Provides item grid view with optional editing controls
  */
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { Card } from "@/components/ui/card";
-import { Store, Pencil, LayoutDashboardIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import ItemCard from "@/components/items/itemcard/ItemCard";
-import ItemDashboard from "@/components/shop/ItemDashboard";
-import { getCommItemsBySeller } from "@/firebase/commItems";
-import { getMPItemsBySeller } from "@/firebase/mpItems";
+import { Store, Pencil } from "lucide-react";
+import ItemCard from "@/components/items/ItemCard";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
+import { AndrewID } from "@/utils/types";
 
-// Interface for shop items (both marketplace and commission types)
 interface ShopItem {
   id: string;
   type: "MARKETPLACE" | "COMMISSION";
   price: number;
   category: string;
   condition?: string;
-  turnaroundDays?: number;
 }
 
 interface ShopDisplayProps {
-  sellerId: string;
+  andrewId: AndrewID;
   isOwnShop?: boolean;
   isDashboard?: boolean;
   isEditing?: boolean;
@@ -33,45 +28,44 @@ interface ShopDisplayProps {
 }
 
 export default function ShopDisplay({
-  sellerId,
+  andrewId,
   isOwnShop = false,
   isDashboard = false,
   isEditing = false,
   handleEditClick,
 }: ShopDisplayProps) {
-  // State for managing component
   const [allItems, setAllItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const { toast } = useToast();
 
-  // Load all shop items when sellerId changes
   useEffect(() => {
     fetchItems();
-  }, [sellerId]);
+  }, [andrewId]);
 
   const fetchItems = async () => {
-    if (!sellerId) return;
+    if (!andrewId) return;
 
     setLoading(true);
     try {
-      // Fetch both item types in parallel for efficiency
-      const [commItems, mpItems] = await Promise.all([
-        getCommItemsBySeller(sellerId),
-        getMPItemsBySeller(sellerId),
+      const [commResponse, mpResponse] = await Promise.all([
+        fetch(`/api/users/${andrewId}/items/commission`),
+        fetch(`/api/users/${andrewId}/items/marketplace`),
       ]);
 
-      // Map commission items
-      const formattedCommItems = commItems.map((item) => ({
+      const commItems = commResponse.ok ? await commResponse.json() : [];
+      const mpItems = mpResponse.ok ? await mpResponse.json() : [];
+
+      console.log("Fetched Commission Items:", commItems);
+      console.log("Fetched Marketplace Items:", mpItems);
+
+      const formattedCommItems = commItems.map((item: any) => ({
         id: item.id,
         type: "COMMISSION" as const,
         price: item.price,
         category: item.category,
-        turnaroundDays: item.turnaroundDays,
       }));
 
-      // Map marketplace items
-      const formattedMpItems = mpItems.map((item) => ({
+      const formattedMpItems = mpItems.map((item: any) => ({
         id: item.id,
         type: "MARKETPLACE" as const,
         price: item.price,
@@ -79,7 +73,6 @@ export default function ShopDisplay({
         condition: item.condition,
       }));
 
-      // Combine both types of items into a single array
       setAllItems([...formattedCommItems, ...formattedMpItems]);
     } catch (error) {
       console.error("Error fetching items:", error);
@@ -93,19 +86,6 @@ export default function ShopDisplay({
     }
   };
 
-  const handleManageItems = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsManageModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsManageModalOpen(false);
-    // Refresh items when modal is closed to reflect any changes
-    fetchItems();
-  };
-
-  // Component to display when there are no items
   const EmptyState = () => (
     <div className="col-span-full flex items-center justify-center py-8">
       <Card className="w-full max-w-lg bg-white">
@@ -132,7 +112,6 @@ export default function ShopDisplay({
 
   return (
     <div className="mx-auto max-w-7xl py-4">
-      {/* Header with action buttons */}
       <div className="flex items-end justify-between mb-4">
         <h1 className="text-3xl font-rubik font-semibold text-gray-900 leading-tight">
           Shop Items
@@ -148,21 +127,10 @@ export default function ShopDisplay({
                 <span>Edit Shop</span>
               </div>
             )}
-
-            {isDashboard && (
-              <div
-                onClick={handleManageItems}
-                className="flex text-sm font-rubik font-semibold items-center text-blue-600 hover:text-blue-800 cursor-pointer"
-              >
-                <LayoutDashboardIcon strokeWidth={3} className="w-4 h-4 mr-1" />
-                <span>Manage Items</span>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Items grid */}
       {allItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {allItems.map((item) => (
@@ -178,18 +146,6 @@ export default function ShopDisplay({
       ) : (
         <EmptyState />
       )}
-
-      {/* Manage Items Modal */}
-      <Dialog open={isManageModalOpen} onOpenChange={handleModalClose}>
-        <DialogContent className="max-w-screen-xl w-[90%] h-[90vh] overflow-y-auto px-10">
-          <div>
-            <DialogTitle className="text-2xl font-rubik font-semibold">
-              Manage Shop Items
-            </DialogTitle>
-            <ItemDashboard sellerId={sellerId} />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ItemCard from "@/components/items/itemcard/ItemCard";
+import ItemCard from "@/components/items/ItemCard";
 import Loading from "@/components/utils/Loading";
-import { ITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_STATUS, ITEM_TYPE } from "@/utils/itemConstants";
 import { getMPItemsByStatus, type MPItemWithId } from "@/firebase/mpItems";
 import {
   getAvailableCommItems,

@@ -1,8 +1,7 @@
-/**
+/** users.ts
  * Firebase operations for user management
  * Handles CRUD operations for the users collection
  */
-
 import { db } from "@/firebase/firebase";
 import {
   collection,
@@ -16,49 +15,48 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
-import { User } from "@/utils/types";
+import { User, ClerkID, FirebaseID, AndrewID, ItemID } from "@/utils/types";
 
 /**
  * Firebase Collection: users
  * {
- *   name: string;
+ *   username: string;
  *   email: string;
  *   avatarUrl?: string;
- *   andrewId: string;
- *   clerkId: string;
- *   stripeId?: string;
+ *   andrewId: AndrewID;
+ *   clerkId: ClerkID;
  *   shopBanner?: string;
  *   shopTitle?: string;
  *   shopDescription?: string;
- *   favorites: string[];
- *   cart: string[];
- *   conversations: string[];
+ *   starRating: number;
+ *   paypalUsername?: string;
+ *   venmoUsername?: string;
+ *   zelleUsername?: string;
+ *   cashappUsername?: string;
+ *   favorites: ItemID[];
  *   createdAt: number;
  * }
  */
 
 // User interface with ID
 export interface UserWithId extends User {
-  id: string;
+  id: FirebaseID;
 }
 
 const usersCollection = collection(db, "users");
 
 // Create a new user
 export const createUser = async (
-  userData: Omit<User, "conversations" | "favorites" | "cart">
-): Promise<string> => {
+  userData: Omit<User, "favorites">
+): Promise<FirebaseID> => {
   try {
-    // Add empty arrays for collections
+    // Add empty array for favorites
     const fullUserData: User = {
       ...userData,
-      conversations: [],
       favorites: [],
-      cart: [],
     };
-
     const docRef = await addDoc(usersCollection, fullUserData);
-    return docRef.id;
+    return docRef.id as FirebaseID;
   } catch (error) {
     console.error("Error creating user:", error);
     throw error;
@@ -67,13 +65,13 @@ export const createUser = async (
 
 // Get a user by ID
 export const getUserById = async (
-  userId: string
+  userId: FirebaseID
 ): Promise<UserWithId | null> => {
   try {
     const userDoc = await getDoc(doc(usersCollection, userId));
     if (userDoc.exists()) {
       return {
-        id: userDoc.id,
+        id: userDoc.id as FirebaseID,
         ...userDoc.data(),
       } as UserWithId;
     }
@@ -84,26 +82,9 @@ export const getUserById = async (
   }
 };
 
-// Get Stripe ID by user ID
-export const getStripeIdByUserId = async (
-  userId: string
-): Promise<string | null> => {
-  try {
-    const userDoc = await getDoc(doc(usersCollection, userId));
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      return userData.stripeId || null;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error getting Stripe ID:", error);
-    throw error;
-  }
-};
-
 // Get user by ClerkId
 export const getUserByClerkId = async (
-  clerkId: string
+  clerkId: ClerkID
 ): Promise<UserWithId | null> => {
   try {
     const q = query(usersCollection, where("clerkId", "==", clerkId));
@@ -112,7 +93,7 @@ export const getUserByClerkId = async (
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
       return {
-        id: userDoc.id,
+        id: userDoc.id as FirebaseID,
         ...userDoc.data(),
       } as UserWithId;
     }
@@ -125,7 +106,7 @@ export const getUserByClerkId = async (
 
 // Get user by AndrewId
 export const getUserByAndrewId = async (
-  andrewId: string
+  andrewId: AndrewID
 ): Promise<UserWithId | null> => {
   try {
     const q = query(usersCollection, where("andrewId", "==", andrewId));
@@ -134,7 +115,7 @@ export const getUserByAndrewId = async (
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
       return {
-        id: userDoc.id,
+        id: userDoc.id as FirebaseID,
         ...userDoc.data(),
       } as UserWithId;
     }
@@ -147,7 +128,7 @@ export const getUserByAndrewId = async (
 
 // Update user
 export const updateUser = async (
-  userId: string,
+  userId: FirebaseID,
   updates: Partial<User>
 ): Promise<void> => {
   try {
@@ -161,8 +142,8 @@ export const updateUser = async (
 
 // Add to favorites
 export const addToFavorites = async (
-  userId: string,
-  itemId: string
+  userId: FirebaseID,
+  itemId: ItemID
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
@@ -177,8 +158,8 @@ export const addToFavorites = async (
 
 // Remove from favorites
 export const removeFromFavorites = async (
-  userId: string,
-  itemId: string
+  userId: FirebaseID,
+  itemId: ItemID
 ): Promise<void> => {
   try {
     const userRef = doc(usersCollection, userId);
@@ -187,87 +168,6 @@ export const removeFromFavorites = async (
     });
   } catch (error) {
     console.error("Error removing from favorites:", error);
-    throw error;
-  }
-};
-
-// Check if item is in favorites
-export const isItemInFavorites = async (
-  userId: string,
-  itemId: string
-): Promise<boolean> => {
-  try {
-    const userData = await getUserById(userId);
-    if (userData) {
-      return userData.favorites.includes(itemId);
-    }
-    return false;
-  } catch (error) {
-    console.error("Error checking favorites:", error);
-    throw error;
-  }
-};
-
-// Add to cart
-export const addToCart = async (
-  userId: string,
-  itemId: string
-): Promise<void> => {
-  try {
-    const userRef = doc(usersCollection, userId);
-    await updateDoc(userRef, {
-      cart: arrayUnion(itemId),
-    });
-  } catch (error) {
-    console.error("Error adding to cart:", error);
-    throw error;
-  }
-};
-
-// Remove from cart
-export const removeFromCart = async (
-  userId: string,
-  itemId: string
-): Promise<void> => {
-  try {
-    const userRef = doc(usersCollection, userId);
-    await updateDoc(userRef, {
-      cart: arrayRemove(itemId),
-    });
-  } catch (error) {
-    console.error("Error removing from cart:", error);
-    throw error;
-  }
-};
-
-// Add conversation to user
-export const addConversationToUser = async (
-  userId: string,
-  conversationId: string
-): Promise<void> => {
-  try {
-    const userRef = doc(usersCollection, userId);
-    await updateDoc(userRef, {
-      conversations: arrayUnion(conversationId),
-    });
-  } catch (error) {
-    console.error("Error adding conversation to user:", error);
-    throw error;
-  }
-};
-
-// Remove conversation from user
-export const removeConversationFromUser = async (
-  userId: string,
-  conversationId: string
-): Promise<void> => {
-  try {
-    const userRef = doc(usersCollection, userId);
-    await updateDoc(userRef, {
-      conversations: arrayRemove(conversationId),
-    });
-  } catch (error) {
-    console.error("Error removing conversation from user:", error);
     throw error;
   }
 };

@@ -14,27 +14,19 @@ import BannerSection from "@/components/shop/BannerSection";
 import ProfileInfo from "@/components/shop/ProfileInfo";
 import ShopInfo from "@/components/shop/ShopInfo";
 import ShopDisplay from "@/components/shop/ShopDisplay";
-import { ShopOwner, ShopFormData } from "@/utils/types";
-import {
-  getUserByAndrewId,
-  getUserByClerkId,
-  updateUser,
-  type UserWithId,
-} from "@/firebase/users";
+import { ShopFormData, User, AndrewID } from "@/utils/types";
 
 type ShopComponentProps = {
-  andrewId: string;
+  andrewId: AndrewID;
 };
 
 export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
-  // Authentication
   const { toast } = useToast();
   const { isSignedIn, user } = useUser();
   const pathname = usePathname();
 
-  // Local State
-  const [shopOwner, setShopOwner] = useState<UserWithId | null>(null);
-  const [userData, setUserData] = useState<UserWithId | null>(null);
+  const [shopOwner, setShopOwner] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadType, setUploadType] = useState<"avatar" | "banner" | null>(
@@ -46,30 +38,21 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
     null
   );
   const [formData, setFormData] = useState<ShopFormData>({
-    name: "",
+    username: "",
     title: "",
     description: "",
   });
 
-  // Check if this is being viewed from the dashboard
   const isDashboard = useMemo(() => {
     return pathname?.includes("/dashboard");
   }, [pathname]);
 
-  const adaptUserToShopOwner = (user: UserWithId): ShopOwner => {
-    return {
-      ...user,
-      _id: user.id,
-    };
-  };
-
-  // Fetch shop owner data and items
+  // Fetch shop owner data
   useEffect(() => {
     const fetchShopData = async () => {
       try {
-        // Fetch shop owner data
-        const owner = await getUserByAndrewId(andrewId);
-        if (!owner) {
+        const response = await fetch(`/api/users/${andrewId}`);
+        if (!response.ok) {
           toast({
             title: "Error",
             description: "Shop not found",
@@ -78,6 +61,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
           return;
         }
 
+        const owner: User = await response.json();
         setShopOwner(owner);
         setAvatarUrl(owner.avatarUrl || null);
         setBannerUrl(owner.shopBanner || null);
@@ -99,54 +83,52 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
 
   // Fetch current user data
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchCurrentUser = async () => {
       if (!user?.id) return;
 
       try {
-        const currentUser = await getUserByClerkId(user.id);
-        if (currentUser) {
-          setUserData(currentUser);
+        const response = await fetch("/api/users/current", { method: "POST" });
+        if (response.ok) {
+          const userData: User = await response.json();
+          setCurrentUser(userData);
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching current user:", error);
       }
     };
 
     if (isSignedIn) {
-      fetchUserData();
+      fetchCurrentUser();
     }
   }, [isSignedIn, user?.id]);
 
-  // Memoized Values
   const defaultShopTitle = useMemo(() => {
-    if (!shopOwner?.name) return "";
-    return `Welcome to ${shopOwner.name.split(" ")[0]}'s Shop`;
-  }, [shopOwner?.name]);
+    if (!shopOwner?.username) return "";
+    return `Welcome to ${shopOwner.username.split(" ")[0]}'s Shop`;
+  }, [shopOwner?.username]);
 
   const isOwnShop = useMemo(
-    () => Boolean(isSignedIn && userData?.andrewId === andrewId),
-    [isSignedIn, userData?.andrewId, andrewId]
+    () => Boolean(isSignedIn && currentUser?.andrewId === andrewId),
+    [isSignedIn, currentUser?.andrewId, andrewId]
   );
 
-  // Effect to update form data when shop owner changes
   useEffect(() => {
     if (shopOwner && !isEditing) {
       setFormData({
-        name: shopOwner.name,
+        username: shopOwner.username,
         title: shopOwner.shopTitle || defaultShopTitle,
         description: shopOwner.shopDescription || "",
       });
     }
   }, [shopOwner, defaultShopTitle, isEditing]);
 
-  // Event Handlers
   const handleEditClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (shopOwner) {
       setFormData({
-        name: shopOwner.name,
+        username: shopOwner.username,
         title: shopOwner.shopTitle || defaultShopTitle,
         description: shopOwner.shopDescription || "",
       });
@@ -170,28 +152,36 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
 
     setIsSaving(true);
     try {
-      await updateUser(shopOwner.id, {
-        name: formData.name,
-        shopTitle: formData.title,
-        shopDescription: formData.description,
+      const response = await fetch("/api/users/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.username,
+          shopTitle: formData.title,
+          shopDescription: formData.description,
+        }),
       });
 
-      setShopOwner((prev) =>
-        prev
-          ? {
-              ...prev,
-              name: formData.name,
-              shopTitle: formData.title,
-              shopDescription: formData.description,
-            }
-          : null
-      );
+      if (response.ok) {
+        setShopOwner((prev) =>
+          prev
+            ? {
+                ...prev,
+                username: formData.username,
+                shopTitle: formData.title,
+                shopDescription: formData.description,
+              }
+            : null
+        );
 
-      setIsEditing(false);
-      toast({
-        title: "Success",
-        description: "Shop settings updated successfully",
-      });
+        setIsEditing(false);
+        toast({
+          title: "Success",
+          description: "Shop settings updated successfully",
+        });
+      } else {
+        throw new Error("Failed to update shop settings");
+      }
     } catch (error) {
       console.error("Error saving shop:", error);
       toast({
@@ -207,7 +197,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
   const handleCancel = () => {
     if (shopOwner) {
       setFormData({
-        name: shopOwner.name,
+        username: shopOwner.username,
         title: shopOwner.shopTitle || defaultShopTitle,
         description: shopOwner.shopDescription || "",
       });
@@ -225,23 +215,33 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
         ...(uploadType === "banner" && { shopBanner: fileUrl }),
       };
 
-      await updateUser(shopOwner.id, updates);
-
-      if (uploadType === "avatar") {
-        setAvatarUrl(fileUrl);
-        setShopOwner((prev) => (prev ? { ...prev, avatarUrl: fileUrl } : null));
-      } else {
-        setBannerUrl(fileUrl);
-        setOriginalBannerUrl(fileUrl);
-        setShopOwner((prev) =>
-          prev ? { ...prev, shopBanner: fileUrl } : null
-        );
-      }
-
-      toast({
-        title: "Success",
-        description: `${uploadType === "avatar" ? "Avatar" : "Banner"} updated successfully`,
+      const response = await fetch("/api/users/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
       });
+
+      if (response.ok) {
+        if (uploadType === "avatar") {
+          setAvatarUrl(fileUrl);
+          setShopOwner((prev) =>
+            prev ? { ...prev, avatarUrl: fileUrl } : null
+          );
+        } else {
+          setBannerUrl(fileUrl);
+          setOriginalBannerUrl(fileUrl);
+          setShopOwner((prev) =>
+            prev ? { ...prev, shopBanner: fileUrl } : null
+          );
+        }
+
+        toast({
+          title: "Success",
+          description: `${uploadType === "avatar" ? "Avatar" : "Banner"} updated successfully`,
+        });
+      } else {
+        throw new Error("Failed to update file");
+      }
     } catch (error) {
       console.error("Error updating file:", error);
       toast({
@@ -258,18 +258,24 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
     if (!isSignedIn || !isOwnShop || !shopOwner) return;
 
     try {
-      await updateUser(shopOwner.id, {
-        shopBanner: "",
+      const response = await fetch("/api/users/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopBanner: "" }),
       });
 
-      setBannerUrl(null);
-      setOriginalBannerUrl(null);
-      setShopOwner((prev) => (prev ? { ...prev, shopBanner: "" } : null));
+      if (response.ok) {
+        setBannerUrl(null);
+        setOriginalBannerUrl(null);
+        setShopOwner((prev) => (prev ? { ...prev, shopBanner: "" } : null));
 
-      toast({
-        title: "Success",
-        description: "Banner removed successfully",
-      });
+        toast({
+          title: "Success",
+          description: "Banner removed successfully",
+        });
+      } else {
+        throw new Error("Failed to remove banner");
+      }
     } catch (error) {
       console.error("Error resetting banner:", error);
       toast({
@@ -287,7 +293,6 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
   return (
     <div className="min-h-screen bg-white">
       <form onSubmit={handleSave}>
-        {/* Banner Section - Now allows editing for shop owners regardless of editing state */}
         <BannerSection
           bannerUrl={bannerUrl}
           isEditing={isEditing}
@@ -297,21 +302,17 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
         />
 
         <div className="mx-auto max-w-7xl py-4">
-          {/* Two column layout below banner */}
           <div className="flex flex-col md:flex-row gap-5">
-            {/* Left sidebar with avatar and profile info */}
             <div className="md:w-80 flex-shrink-0 justifyContent-start">
               <ProfileInfo
-                shopOwner={shopOwner ? adaptUserToShopOwner(shopOwner) : null}
+                shopOwner={shopOwner}
                 avatarUrl={avatarUrl}
                 isOwnShop={isOwnShop}
                 setUploadType={setUploadType}
               />
             </div>
 
-            {/* Right section with shop description and content */}
             <div className="flex-1">
-              {/* Shop Description */}
               <div className="mb-8">
                 <ShopInfo
                   shopTitle={shopOwner.shopTitle || null}
@@ -327,9 +328,8 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
                 />
               </div>
 
-              {/* Shop Section */}
               <ShopDisplay
-                sellerId={shopOwner?.id ?? ""}
+                andrewId={andrewId}
                 isOwnShop={isOwnShop}
                 isDashboard={isDashboard}
                 isEditing={isEditing}

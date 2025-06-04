@@ -6,34 +6,18 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { PlusCircle, Store, PackageOpen } from "lucide-react";
-import ItemCard from "@/components/items/itemcard/ItemCard";
-import { getCommItemsBySeller } from "@/firebase/commItems";
-import { getMPItemsBySeller } from "@/firebase/mpItems";
+import ItemCard from "@/components/items/ItemCard";
+import { ShopItem, AndrewID } from "@/utils/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_TYPE } from "@/utils/itemConstants";
 import Loading from "@/components/utils/Loading";
 
-// Interface for shop items (both marketplace and commission types)
-interface ShopItem {
-  id: string;
-  type: "MARKETPLACE" | "COMMISSION";
-  price: number;
-  category: string;
-  condition?: string;
-  turnaroundDays?: number;
-}
-
 interface ItemDashboardProps {
-  sellerId: string;
-  isModal?: boolean;
+  andrewId: AndrewID;
 }
 
-export default function ItemDashboard({
-  sellerId,
-  isModal = false,
-}: ItemDashboardProps) {
-  // State for managing component
+export default function ItemDashboard({ andrewId }: ItemDashboardProps) {
   const [activeTab, setActiveTab] = useState<"marketplace" | "commission">(
     "commission"
   );
@@ -41,11 +25,9 @@ export default function ItemDashboard({
   const [marketplaceItems, setMarketplaceItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Hooks
   const router = useRouter();
   const { toast } = useToast();
 
-  // Load shop items when sellerId changes
   useEffect(() => {
     const initializeComponent = async () => {
       setLoading(true);
@@ -54,38 +36,36 @@ export default function ItemDashboard({
     };
 
     initializeComponent();
-  }, [sellerId]);
+  }, [andrewId]);
 
-  // Navigate to item creation page
   const handleCreateItem = () => {
     router.push(`/item/create?type=${activeTab}`);
   };
 
-  // Fetch and refresh both commission and marketplace items
   const refreshItems = async () => {
-    if (!sellerId) return;
+    if (!andrewId) return;
 
     try {
-      // Fetch both item types in parallel for efficiency
-      const [commItems, mpItems] = await Promise.all([
-        getCommItemsBySeller(sellerId),
-        getMPItemsBySeller(sellerId),
+      // Fetch items via API using andrewId
+      const [commResponse, mpResponse] = await Promise.all([
+        fetch(`/api/users/${andrewId}/items/commission`),
+        fetch(`/api/users/${andrewId}/items/marketplace`),
       ]);
 
-      // Map commission items to a consistent format
+      const commItems = commResponse.ok ? await commResponse.json() : [];
+      const mpItems = mpResponse.ok ? await mpResponse.json() : [];
+
       setCommissionItems(
-        commItems.map((item) => ({
+        commItems.map((item: any) => ({
           id: item.id,
           type: "COMMISSION" as const,
           price: item.price,
           category: item.category,
-          turnaroundDays: item.turnaroundDays,
         }))
       );
 
-      // Map marketplace items to a consistent format
       setMarketplaceItems(
-        mpItems.map((item) => ({
+        mpItems.map((item: any) => ({
           id: item.id,
           type: "MARKETPLACE" as const,
           price: item.price,
@@ -103,12 +83,10 @@ export default function ItemDashboard({
     }
   };
 
-  // Component to display when there are no items in a tab
   const EmptyState = ({ type }: { type: "marketplace" | "commission" }) => (
     <div className="col-span-full flex items-center justify-center py-8">
       <Card className="w-full max-w-lg bg-white">
         <div className="flex flex-col items-center gap-6 p-10">
-          {/* Icon for each tab type */}
           <div className="rounded-full bg-gray-50 p-4">
             {type === "marketplace" ? (
               <Store className="h-8 w-8 text-gray-400" />
@@ -120,7 +98,6 @@ export default function ItemDashboard({
             <h3 className="font-serif text-xl text-gray-900">
               No {type === "marketplace" ? "Marketplace" : "Commission"} Items
             </h3>
-
             <p className="mt-2 text-sm text-gray-500">
               Create your first {type} item by clicking the '+' button.
             </p>
@@ -158,16 +135,13 @@ export default function ItemDashboard({
     return <Loading />;
   }
 
-  // Define the content based on active tab for normal dashboard view
   const renderContent = () => {
     const items =
       activeTab === "commission" ? commissionItems : marketplaceItems;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {/* Create button always appears in editor */}
+      <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
         <CreateItemCard />
-
         {items.length > 0 ? (
           items.map((item) => (
             <div key={item.id} className="flex justify-center">
@@ -184,17 +158,14 @@ export default function ItemDashboard({
             </div>
           ))
         ) : (
-          // Show empty state if no items
           <EmptyState type={activeTab} />
         )}
       </div>
     );
   };
 
-  // Return different layout based on whether we're in a modal or not
   return (
-    <div className={isModal ? "w-full" : "mt-4 max-w-7xl mx-auto"}>
-      {/* Tabs */}
+    <div className="w-full">
       <div className="flex mb-4">
         <div className="flex space-x-8 text-left font-rubik font-semibold">
           <button
@@ -207,7 +178,6 @@ export default function ItemDashboard({
           >
             Commissions
           </button>
-
           <button
             onClick={() => setActiveTab("marketplace")}
             className={`py-2 px-0 text-sm border-b-[3px] transition-colors ${
@@ -220,8 +190,6 @@ export default function ItemDashboard({
           </button>
         </div>
       </div>
-
-      {/* Content container */}
       <div className="mt-0">{renderContent()}</div>
     </div>
   );

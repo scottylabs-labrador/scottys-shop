@@ -1,16 +1,18 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { SignIn, useUser } from "@clerk/nextjs";
 import { ShopEmbed } from "@/components/shop/ShopEmbed";
-import PastSalesEmbed from "@/components/shop/PastSalesEmbed";
+import ItemDashboard from "@/components/shop/ItemDashboard";
 import Loading from "@/components/utils/Loading";
-import { getUserByClerkId } from "@/firebase/users";
+import { AndrewID, User } from "@/utils/types";
 
 export default function SellerDashboard() {
   const { isLoaded, isSignedIn, user } = useUser();
-  const [andrewId, setAndrewId] = useState<string>("");
+  const [andrewId, setAndrewId] = useState<AndrewID | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"shop" | "past sales">("shop");
+  const [activeTab, setActiveTab] = useState<"shop" | "items" | "past sales">(
+    "shop"
+  );
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -18,10 +20,14 @@ export default function SellerDashboard() {
 
       try {
         setLoading(true);
-        const userData = await getUserByClerkId(user.id);
+        // Fetch current user data via secure API endpoint
+        const response = await fetch("/api/users/current", { method: "POST" });
 
-        if (userData && userData.andrewId) {
+        if (response.ok) {
+          const userData: User = await response.json();
           setAndrewId(userData.andrewId);
+        } else {
+          console.error("Failed to fetch user data");
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -49,11 +55,21 @@ export default function SellerDashboard() {
   }
 
   const renderTabContent = () => {
+    if (!andrewId) return <Loading />;
+
     switch (activeTab) {
       case "shop":
         return <ShopEmbed andrewId={andrewId} />;
+      case "items":
+        return <ItemDashboard andrewId={andrewId} />;
       case "past sales":
-        return <PastSalesEmbed />;
+        return (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">
+              Past sales functionality coming soon...
+            </p>
+          </div>
+        );
       default:
         return <ShopEmbed andrewId={andrewId} />;
     }
@@ -66,7 +82,6 @@ export default function SellerDashboard() {
           Seller Dashboard
         </h1>
       </span>
-
       {/* Tabs Navigation */}
       <div className="flex mb-6">
         <div className="flex space-x-8 text-left font-rubik font-semibold">
@@ -74,18 +89,27 @@ export default function SellerDashboard() {
             onClick={() => setActiveTab("shop")}
             className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
               activeTab === "shop"
-                ? "border-blue-500 text-gray-900 font-medium"
+                ? "border-black text-gray-900 font-medium"
                 : "border-transparent text-gray-400 hover:text-gray-500"
             }`}
           >
-            Shop Details
+            Shop
           </button>
-
+          <button
+            onClick={() => setActiveTab("items")}
+            className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
+              activeTab === "items"
+                ? "border-black text-gray-900 font-medium"
+                : "border-transparent text-gray-400 hover:text-gray-500"
+            }`}
+          >
+            Items
+          </button>
           <button
             onClick={() => setActiveTab("past sales")}
             className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
               activeTab === "past sales"
-                ? "border-blue-500 text-gray-900 font-medium"
+                ? "border-black text-gray-900 font-medium"
                 : "border-transparent text-gray-400 hover:text-gray-500"
             }`}
           >
@@ -93,7 +117,6 @@ export default function SellerDashboard() {
           </button>
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="mt-0">{renderTabContent()}</div>
     </div>

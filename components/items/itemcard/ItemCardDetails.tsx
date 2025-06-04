@@ -8,7 +8,7 @@ import {
   ITEM_TYPE,
   ITEM_CONDITIONS,
   conditionColors,
-} from "@/utils/ItemConstants";
+} from "@/utils/itemConstants";
 
 interface ItemCardDetailsProps {
   item: any;
@@ -21,8 +21,6 @@ export default function ItemCardDetails({
   itemId,
   type,
 }: ItemCardDetailsProps) {
-  const isCommissionItem = "turnaroundDays" in item;
-
   // Render the condition badge consistently with ItemPage
   const renderConditionBadge = (condition: string) => {
     // First try to find if it's a key in ITEM_CONDITIONS
@@ -69,14 +67,9 @@ export default function ItemCardDetails({
           <span className="text-lg font-bold text-gray-900">
             ${item.price.toFixed(2)}
           </span>
-          {/* Show turnaround days for commission items, condition for marketplace items */}
-          {isCommissionItem ? (
-            <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
-              {item.turnaroundDays} {item.turnaroundDays === 1 ? "day" : "days"}
-            </span>
-          ) : (
-            renderConditionBadge(item.condition)
-          )}
+          {/* Show condition for marketplace items */}
+          {type === ITEM_TYPE.MARKETPLACE &&
+            renderConditionBadge(item.condition)}
         </div>
       </div>
     </Link>

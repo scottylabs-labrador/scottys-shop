@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchItems, type SearchFilters } from "@/firebase/searchService";
+import { searchItems } from "@/firebase/searchService";
+import { SearchFilters } from "@/utils/types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +18,6 @@ export async function GET(request: NextRequest) {
         : undefined,
       category: searchParams.get("category") || undefined,
       condition: searchParams.get("condition") || undefined,
-      maxTurnaroundDays: searchParams.has("maxTurnaroundDays")
-        ? Number(searchParams.get("maxTurnaroundDays"))
-        : undefined,
       type: searchParams.get("type") || undefined,
     };
 

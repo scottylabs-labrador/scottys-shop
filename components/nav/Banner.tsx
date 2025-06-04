@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 
 const messages: string[] = [
-  "Welcome to Scotty's Shop!",
+  "Welcome to Shop Scotty!",
   "Check out the student made items!",
   "For your every day, and every other day needs.",
   "Enjoy the comfort of student to student transactions.",

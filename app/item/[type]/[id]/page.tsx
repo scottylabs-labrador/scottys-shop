@@ -1,115 +1,101 @@
 "use client";
-
 import { useUser } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronRight,
-  MessageSquare,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import FavoriteButton from "@/components/items/FavoriteButton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { ITEM_STATUS, ITEM_TYPE } from "@/utils/ItemConstants";
-import { getCommItemById, type CommItemWithId } from "@/firebase/commItems";
-import { getMPItemById, type MPItemWithId } from "@/firebase/mpItems";
-import {
-  getUserById,
-  getUserByClerkId,
-  addToFavorites,
-  removeFromFavorites,
-  type UserWithId,
-} from "@/firebase/users";
-import {
-  createItemPurchaseConversation,
-  findConversationByParticipantsAndItem,
-  getItemPurchaseMessageTemplate,
-} from "@/firebase/conversations";
+import { ITEM_STATUS, ITEM_TYPE } from "@/utils/itemConstants";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
-
-// Import badge components
+import { StatusBadge, ConditionBadge } from "@/components/items/ItemBadges";
 import {
-  StatusBadge,
-  TypeBadge,
-  ConditionBadge,
-  TurnaroundBadge,
-} from "@/components/items/ItemBadges";
+  ItemID,
+  User,
+  SafeUserData,
+  MarketplaceItem,
+  CommissionItem,
+} from "@/utils/types";
 
-const DEFAULT_AVATAR = "/assets/default-avatar.png";
+const DEFAULT_AVATAR = "/assets/default-avatar.jpg";
 
-type ItemType = CommItemWithId | MPItemWithId;
+// Union type for items that can be displayed on the item page
+type ItemData = MarketplaceItem | CommissionItem;
 
 export default function ItemPage() {
   const params = useParams<{ type: string; id: string }>();
   const { isSignedIn, user } = useUser();
   const { toast } = useToast();
-  const router = useRouter();
 
   // Core state
-  const [item, setItem] = useState<ItemType | null>(null);
-  const [seller, setSeller] = useState<UserWithId | null>(null);
+  const [item, setItem] = useState<ItemData | null>(null);
+  const [seller, setSeller] = useState<SafeUserData | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
-  const [userFirebaseId, setUserFirebaseId] = useState<string | null>(null);
   const [isOwnedByUser, setIsOwnedByUser] = useState(false);
-  const [existingConversationId, setExistingConversationId] = useState<
-    string | null
-  >(null);
 
   // UI state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUpArrow, setShowUpArrow] = useState(false);
   const [showDownArrow, setShowDownArrow] = useState(false);
   const [isMainImageHovered, setIsMainImageHovered] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
-
   const isCommissionType = params.type === ITEM_TYPE.COMMISSION.toLowerCase();
   const isValidType =
     params.type === ITEM_TYPE.COMMISSION.toLowerCase() ||
     params.type === ITEM_TYPE.MARKETPLACE.toLowerCase();
 
-  // Get user's Firestore ID from Clerk ID
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (isSignedIn && user?.id) {
-        try {
-          const userData = await getUserByClerkId(user.id);
-          if (userData) {
-            setUserFirebaseId(userData.id);
+  // Type guard functions
+  const isMarketplaceItem = (item: ItemData): item is MarketplaceItem => {
+    return "status" in item && "condition" in item;
+  };
 
-            // Build favorite item ID
-            const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
-            setIsFavorited(
-              userData.favorites?.includes(favoriteItemId) || false
-            );
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+  const isCommissionItem = (item: ItemData): item is CommissionItem => {
+    return "isAvailable" in item;
+  };
+
+  // Fetch current user data
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (!isSignedIn || !user?.id) return;
+
+      try {
+        const response = await fetch("/api/users/current", { method: "POST" });
+        if (response.ok) {
+          const userData: User = await response.json();
+          setCurrentUser(userData);
+
+          // Check if item is favorited
+          const favoriteItemId = `${isCommissionType ? "comm" : "mp"}_${params.id}`;
+          setIsFavorited(
+            userData.favorites?.includes(favoriteItemId as ItemID) || false
+          );
         }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
       }
     };
 
-    fetchUserData();
+    fetchCurrentUser();
   }, [isSignedIn, user?.id, params.id, isCommissionType]);
 
   // Fetch item and seller data
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // Fetch item based on type
-        const fetchedItem = isCommissionType
-          ? await getCommItemById(params.id)
-          : await getMPItemById(params.id);
+      if (!isValidType || !params.id) return;
 
-        if (!fetchedItem) {
+      try {
+        // Fetch item data via API
+        const itemResponse = await fetch(
+          `/api/items/${params.type}/${params.id}`
+        );
+        if (!itemResponse.ok) {
           toast({
             title: "Error",
             description: "Item not found",
@@ -118,39 +104,18 @@ export default function ItemPage() {
           return;
         }
 
-        setItem(fetchedItem);
+        const itemData: ItemData = await itemResponse.json();
+        setItem(itemData);
 
-        // Fetch seller data
-        const fetchedSeller = await getUserById(fetchedItem.sellerId);
-        if (fetchedSeller) {
-          setSeller(fetchedSeller);
-          setAvatarUrl(fetchedSeller.avatarUrl || DEFAULT_AVATAR);
+        // Extract AndrewID from seller data and fetch seller info
+        const sellerResponse = await fetch(`/api/users/${itemData.sellerId}`);
+        if (sellerResponse.ok) {
+          const sellerData: SafeUserData = await sellerResponse.json();
+          setSeller(sellerData);
 
-          // Check if the current user is the seller
-          if (userFirebaseId && fetchedSeller.id === userFirebaseId) {
+          // Check if current user owns this item
+          if (currentUser && sellerData.andrewId === currentUser.andrewId) {
             setIsOwnedByUser(true);
-          }
-        }
-
-        // Check if conversation already exists for this item
-        if (
-          isSignedIn &&
-          userFirebaseId &&
-          fetchedSeller &&
-          userFirebaseId !== fetchedSeller.id
-        ) {
-          try {
-            const conversation = await findConversationByParticipantsAndItem(
-              userFirebaseId,
-              fetchedSeller.id,
-              params.id
-            );
-
-            if (conversation) {
-              setExistingConversationId(conversation.id);
-            }
-          } catch (error) {
-            console.error("Error checking for existing conversation:", error);
           }
         }
       } catch (error) {
@@ -163,17 +128,8 @@ export default function ItemPage() {
       }
     };
 
-    if (isValidType && params.id && userFirebaseId) {
-      fetchData();
-    }
-  }, [
-    isCommissionType,
-    params.id,
-    isSignedIn,
-    isValidType,
-    toast,
-    userFirebaseId,
-  ]);
+    fetchData();
+  }, [params.type, params.id, isValidType, toast, currentUser]);
 
   // Handle thumbnail navigation
   useEffect(() => {
@@ -211,7 +167,6 @@ export default function ItemPage() {
   const handleImageNav = (e: React.MouseEvent, direction: "prev" | "next") => {
     e.preventDefault();
     e.stopPropagation();
-
     if (!item?.images.length) return;
 
     if (direction === "prev") {
@@ -229,7 +184,7 @@ export default function ItemPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isSignedIn || !userFirebaseId || !item) {
+    if (!isSignedIn || !currentUser || !item) {
       toast({
         title: "Authentication required",
         description: "Please sign in to add items to favorites",
@@ -242,80 +197,30 @@ export default function ItemPage() {
 
     try {
       setIsLoading(true);
-      if (isFavorited) {
-        await removeFromFavorites(userFirebaseId, favoriteItemId);
-        setIsFavorited(false);
+      const action = isFavorited ? "remove" : "add";
+
+      const response = await fetch("/api/users/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: favoriteItemId, action }),
+      });
+
+      if (response.ok) {
+        setIsFavorited(!isFavorited);
         toast({
           title: "Success",
-          description: "Removed from favorites",
+          description: isFavorited
+            ? "Removed from favorites"
+            : "Added to favorites",
         });
       } else {
-        await addToFavorites(userFirebaseId, favoriteItemId);
-        setIsFavorited(true);
-        toast({
-          title: "Success",
-          description: "Added to favorites",
-        });
+        throw new Error("Failed to update favorites");
       }
     } catch (error) {
       console.error("Error updating favorites:", error);
       toast({
         title: "Error",
         description: "Failed to update favorites",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRequestToBuy = async () => {
-    if (!isSignedIn || !userFirebaseId || !item || !seller) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to message the seller",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If the user already has a conversation about this item, navigate to it
-    if (existingConversationId) {
-      router.push(`/conversations/${existingConversationId}`);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Create template message based on item availability
-      const initialMessage = canPurchase
-        ? getItemPurchaseMessageTemplate(
-            item.title,
-            isCommissionType ? "commission" : "marketplace"
-          )
-        : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
-
-      // Create a new conversation with initial message
-      const conversationId = await createItemPurchaseConversation(
-        userFirebaseId,
-        seller.id,
-        params.id,
-        isCommissionType ? "commission" : "marketplace",
-        initialMessage
-      );
-
-      toast({
-        title: "Message sent",
-        description: "Your message has been sent to the seller",
-      });
-
-      // Navigate to the conversation
-      router.push(`/conversations/${conversationId}`);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
         variant: "destructive",
       });
     } finally {
@@ -342,18 +247,21 @@ export default function ItemPage() {
   }
 
   const validImages = item.images.filter((url) => url && url.trim() !== "");
-  const isAvailable = isCommissionType
-    ? (item as CommItemWithId).isAvailable
-    : (item as MPItemWithId).status === ITEM_STATUS.AVAILABLE;
 
-  // Get the status string consistently
-  const statusText = isCommissionType
-    ? (item as CommItemWithId).isAvailable
+  // Type-safe way to determine availability and status
+  const isAvailable = isCommissionItem(item)
+    ? item.isAvailable
+    : isMarketplaceItem(item)
+      ? item.status === ITEM_STATUS.AVAILABLE
+      : false;
+
+  const statusText = isCommissionItem(item)
+    ? item.isAvailable
       ? ITEM_STATUS.AVAILABLE
       : "Unavailable"
-    : (item as MPItemWithId).status;
-
-  const canPurchase = isAvailable;
+    : isMarketplaceItem(item)
+      ? item.status
+      : ITEM_STATUS.AVAILABLE;
 
   return (
     <div className="container mx-auto px-4 py-8 font-rubik max-w-7xl">
@@ -371,7 +279,6 @@ export default function ItemPage() {
                   <ChevronUp className="h-4 w-4" />
                 </button>
               )}
-
               <div
                 ref={thumbnailContainerRef}
                 className="h-full w-full overflow-y-auto scrollbar-hide space-y-4 px-2 py-2"
@@ -398,7 +305,6 @@ export default function ItemPage() {
                   </div>
                 ))}
               </div>
-
               {showDownArrow && (
                 <button
                   className="absolute bottom-0 w-full h-8 bg-white/80 hover:bg-white flex items-center justify-center rounded-b-lg"
@@ -409,7 +315,6 @@ export default function ItemPage() {
               )}
             </div>
           </div>
-
           {/* Main Image */}
           <div className="col-span-10">
             <div
@@ -422,12 +327,11 @@ export default function ItemPage() {
                   src={validImages[currentIndex]}
                   alt={`Main image ${currentIndex + 1}`}
                   fill
-                  sizes="(max-width: 768px) 100vw, 50vw" // Add this line
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover"
                   priority={currentIndex === 0}
                 />
               )}
-
               {validImages.length > 1 && isMainImageHovered && (
                 <>
                   <button
@@ -444,7 +348,6 @@ export default function ItemPage() {
                   </button>
                 </>
               )}
-
               {/* Favorite Button - Hidden if user owns the item */}
               {!isOwnedByUser ? (
                 <div
@@ -461,7 +364,7 @@ export default function ItemPage() {
                     isFavorited={isFavorited}
                     isLoading={isLoading}
                     onClick={handleFavoriteClick}
-                    className="p-3" // Slightly larger button for the item page
+                    className="p-3"
                   />
                 </div>
               ) : (
@@ -474,7 +377,6 @@ export default function ItemPage() {
                   Your Item
                 </div>
               )}
-
               {/* Image Navigation Dots */}
               {validImages.length > 1 && (
                 <div
@@ -500,7 +402,6 @@ export default function ItemPage() {
             </div>
           </div>
         </div>
-
         {/* Details Section */}
         <div className="space-y-8">
           <div className="space-y-4">
@@ -510,22 +411,15 @@ export default function ItemPage() {
                 <StatusBadge status={statusText} />
               </div>
               <div className="flex items-center gap-2 text-sm font-semibold">
-                {/* Condition or turnaround time badge */}
-                {isCommissionType ? (
-                  <TurnaroundBadge
-                    days={(item as CommItemWithId).turnaroundDays}
-                  />
-                ) : (
-                  <ConditionBadge
-                    condition={(item as MPItemWithId).condition}
-                  />
+                {/* Condition badge - only for marketplace items */}
+                {isMarketplaceItem(item) && (
+                  <ConditionBadge condition={item.condition} />
                 )}
               </div>
             </div>
             <p className="text-gray-600 text-lg font-normal">
               {item.description}
             </p>
-
             <div className="rounded-2xl border p-6 bg-white shadow-sm">
               <p className="text-4xl font-bold">${item.price.toFixed(2)}</p>
               {/* Action Buttons */}
@@ -539,94 +433,24 @@ export default function ItemPage() {
                       Edit Item
                     </Button>
                   </Link>
-                ) : existingConversationId ? (
-                  // Direct navigation to existing conversation
-                  <Button
-                    onClick={() =>
-                      router.push(`/conversations/${existingConversationId}`)
-                    }
-                    className="w-full font-bold bg-blue-600 hover:bg-blue-700"
-                    size="lg"
-                  >
-                    <MessageSquare className="w-5 h-5 mr-2" />
-                    View Conversation
-                  </Button>
                 ) : (
-                  // Creating a new conversation
-                  <Button
-                    onClick={async () => {
-                      if (!isSignedIn || !userFirebaseId || !item || !seller) {
-                        toast({
-                          title: "Authentication required",
-                          description: "Please sign in to message the seller",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-
-                      setIsLoading(true);
-                      try {
-                        // Create template message based on item availability
-                        const initialMessage = canPurchase
-                          ? getItemPurchaseMessageTemplate(
-                              item.title,
-                              isCommissionType
-                                ? ITEM_TYPE.COMMISSION
-                                : ITEM_TYPE.MARKETPLACE
-                            )
-                          : `Hi! I'm interested in your ${isCommissionType ? "commission" : "item"} "${item.title}". Do you know when it will be available again?`;
-
-                        // Create a new conversation with initial message
-                        const conversationId =
-                          await createItemPurchaseConversation(
-                            userFirebaseId,
-                            seller.id,
-                            params.id,
-                            isCommissionType
-                              ? ITEM_TYPE.COMMISSION
-                              : ITEM_TYPE.MARKETPLACE,
-                            initialMessage
-                          );
-
-                        toast({
-                          title: "Message sent",
-                          description:
-                            "Your message has been sent to the seller",
-                        });
-
-                        // Navigate to the conversation
-                        router.push(`/conversations/${conversationId}`);
-                      } catch (error) {
-                        console.error("Error creating conversation:", error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to send message",
-                          variant: "destructive",
-                        });
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    }}
-                    className="w-full font-bold bg-black hover:bg-gray-800"
-                    size="lg"
-                    disabled={!canPurchase || isLoading}
-                  >
-                    <MessageSquare className="w-5 h-5 mr-2" />
-                    {isLoading ? "Processing..." : "Message Seller"}
-                  </Button>
+                  <div className="text-center py-4">
+                    <p className="text-gray-600">
+                      Contact the seller through their shop page
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
-
             {/* Seller Info */}
             <Link href={`/shop/${seller.andrewId}`}>
               <div className="flex items-center gap-3 pt-3 px-2 group">
                 <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-black">
                   <AvatarImage
-                    src={avatarUrl || DEFAULT_AVATAR}
+                    src={seller.avatarUrl || DEFAULT_AVATAR}
                     className="object-cover"
                   />
-                  <AvatarFallback>{seller.name[0]}</AvatarFallback>
+                  <AvatarFallback>{seller.username[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <p className="text-sm text-gray-600">@{seller.andrewId}</p>

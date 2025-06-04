@@ -19,9 +19,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { SlidersHorizontal, X } from "lucide-react";
-import { ITEM_CATEGORIES } from "@/utils/ItemConstants";
+import { ITEM_CATEGORIES } from "@/utils/itemConstants";
 import { Input } from "@/components/ui/input";
 import { QueryConstraint, where } from "firebase/firestore";
 import { SearchFilters } from "@/utils/types";
@@ -69,9 +68,7 @@ export function ItemFilter({
   const [condition, setCondition] = useState<string | undefined>(
     initialFilters.condition
   );
-  const [maxTurnaroundDays, setMaxTurnaroundDays] = useState<number>(
-    initialFilters.maxTurnaroundDays || 30
-  );
+
   const [itemType, setItemType] = useState<string | undefined>(
     initialFilters.type
   );
@@ -105,18 +102,6 @@ export function ItemFilter({
         type: "condition",
         value: initialFilters.condition,
         displayValue: initialFilters.condition,
-      });
-    }
-
-    if (
-      (isCommission || isSearch) &&
-      initialFilters.maxTurnaroundDays &&
-      initialFilters.maxTurnaroundDays < 30
-    ) {
-      initialActiveFilters.push({
-        type: "turnaround",
-        value: initialFilters.maxTurnaroundDays.toString(),
-        displayValue: `${initialFilters.maxTurnaroundDays} days`,
       });
     }
 
@@ -179,15 +164,6 @@ export function ItemFilter({
     if ((isMarketplace || isSearch) && filters.condition) {
       constraints.push(where("condition", "==", filters.condition));
     }
-    if (
-      (isCommission || isSearch) &&
-      filters.maxTurnaroundDays &&
-      filters.maxTurnaroundDays < 30
-    ) {
-      constraints.push(
-        where("turnaroundDays", "<=", filters.maxTurnaroundDays)
-      );
-    }
 
     // Add availability filter based on item type
     if (isMarketplace) {
@@ -227,14 +203,6 @@ export function ItemFilter({
       });
     }
 
-    if ((isCommission || isSearch) && maxTurnaroundDays < 30) {
-      newFilters.push({
-        type: "turnaround",
-        value: maxTurnaroundDays.toString(),
-        displayValue: `${maxTurnaroundDays} days`,
-      });
-    }
-
     if (isSearch && itemType) {
       newFilters.push({
         type: "itemType",
@@ -250,8 +218,6 @@ export function ItemFilter({
       maxPrice: maxPrice < 1000 ? maxPrice : undefined,
       category,
       condition: isMarketplace || isSearch ? condition : undefined,
-      maxTurnaroundDays:
-        isCommission || isSearch ? maxTurnaroundDays : undefined,
       type: isSearch ? itemType : undefined,
     };
 
@@ -278,9 +244,6 @@ export function ItemFilter({
       case "condition":
         setCondition(undefined);
         break;
-      case "turnaround":
-        setMaxTurnaroundDays(30);
-        break;
       case "itemType":
         setItemType(undefined);
         break;
@@ -306,12 +269,6 @@ export function ItemFilter({
             : undefined,
       category: filterToRemove.type === "category" ? undefined : category,
       condition: filterToRemove.type === "condition" ? undefined : condition,
-      maxTurnaroundDays:
-        filterToRemove.type === "turnaround"
-          ? undefined
-          : isCommission || isSearch
-            ? maxTurnaroundDays
-            : undefined,
       type: filterToRemove.type === "itemType" ? undefined : itemType,
     };
 
@@ -329,7 +286,6 @@ export function ItemFilter({
     setMaxPriceInput("");
     setCategory(undefined);
     setCondition(undefined);
-    setMaxTurnaroundDays(30);
     setItemType(undefined);
     setActiveFilters([]);
 
@@ -462,29 +418,6 @@ export function ItemFilter({
               </SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      )}
-
-      {/* Turnaround Days - Show in Commission or Search */}
-      {(isCommission || isSearch) && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-rubik font-medium">
-            Max Turnaround Days
-          </h4>
-          <div className="pt-2">
-            <div className="h-2 cursor-pointer">
-              <Slider
-                value={[maxTurnaroundDays]}
-                onValueChange={([value]) => setMaxTurnaroundDays(value)}
-                max={30}
-                step={1}
-                className="w-full cursor-pointer"
-              />
-            </div>
-            <span className="text-sm font-rubik text-muted-foreground mt-2 block">
-              {maxTurnaroundDays} days
-            </span>
-          </div>
         </div>
       )}
 

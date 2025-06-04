@@ -8,9 +8,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { searchItems, filterSearchResults } from "@/firebase/searchService";
 import { SearchResult } from "@/utils/types";
-import ItemCard from "@/components/items/itemcard/ItemCard";
+import ItemCard from "@/components/items/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
-import { ITEM_TYPE } from "@/utils/ItemConstants";
+import { ITEM_TYPE } from "@/utils/itemConstants";
 import Loading from "@/components/utils/Loading";
 import { SearchFilters } from "@/utils/types";
 
@@ -35,9 +35,6 @@ export default function SearchResultsPage() {
       : undefined,
     category: searchParams.get("category") || undefined,
     condition: searchParams.get("condition") || undefined,
-    maxTurnaroundDays: searchParams.get("maxTurnaroundDays")
-      ? Number(searchParams.get("maxTurnaroundDays"))
-      : undefined,
     type: searchParams.get("type") || undefined,
   });
 
@@ -144,11 +141,6 @@ export default function SearchResultsPage() {
       params.set("maxPrice", newFilters.maxPrice.toString());
     if (newFilters.category) params.set("category", newFilters.category);
     if (newFilters.condition) params.set("condition", newFilters.condition);
-    if (
-      newFilters.maxTurnaroundDays !== undefined &&
-      newFilters.maxTurnaroundDays < 30
-    )
-      params.set("maxTurnaroundDays", newFilters.maxTurnaroundDays.toString());
     if (activeTab !== "all") params.set("type", activeTab);
 
     router.push(`/search?${params.toString()}`);

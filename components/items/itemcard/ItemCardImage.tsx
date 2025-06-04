@@ -23,7 +23,7 @@ interface ItemCardImageProps {
   isDashboard?: boolean;
   isLoading: boolean;
   validImages: string[];
-  onFavoriteClick: (e: React.MouseEvent) => void;
+  onFavoriteClick?: (e: React.MouseEvent) => void;
   onToggleStatus?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: () => void;
@@ -42,8 +42,6 @@ export default function ItemCardImage({
   validImages,
   onFavoriteClick,
   onToggleStatus,
-  onEdit,
-  onDelete,
 }: ItemCardImageProps) {
   return (
     <div className="relative aspect-square">
@@ -100,7 +98,7 @@ export default function ItemCardImage({
         </div>
       </Link>
 
-      {/* Favorite Button - Moved outside of Link to prevent event conflicts */}
+      {/* Favorite Button */}
       {!isOwnedByUser && (
         <div
           className={cn(
@@ -122,7 +120,7 @@ export default function ItemCardImage({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onFavoriteClick(e);
+              onFavoriteClick?.(e);
             }}
           />
         </div>

@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import ItemCard from "@/components/items/itemcard/ItemCard";
+import { useUser } from "@clerk/nextjs";
+import ItemCard from "@/components/items/ItemCard";
 import { ItemFilter } from "@/components/items/ItemFilter";
 import Loading from "@/components/utils/Loading";
-import { ITEM_TYPE, ITEM_STATUS } from "@/utils/ItemConstants";
+import { ITEM_TYPE, ITEM_STATUS } from "@/utils/itemConstants";
 import {
   getMPItemsByStatus,
   getMPItemsByCategory,
   getMPItemsByPriceRange,
   type MPItemWithId,
 } from "@/firebase/mpItems";
+import { User } from "@/utils/types";
 
 interface FilterState {
   minPrice?: number;
@@ -23,10 +25,12 @@ interface FilterState {
 export default function MarketplacePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isLoaded } = useUser();
   const [items, setItems] = useState<MPItemWithId[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
-  // Initialize filters from URL parameters
   const [filters, setFilters] = useState<FilterState>(() => ({
     minPrice: searchParams.get("minPrice")
       ? Number(searchParams.get("minPrice"))
@@ -38,14 +42,42 @@ export default function MarketplacePage() {
     condition: searchParams.get("condition") || undefined,
   }));
 
-  // Fetch items based on current filters
+  // Fetch current user data
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (!user?.id) {
+        setUserLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/users/current", { method: "POST" });
+        if (response.ok) {
+          const userData: User = await response.json();
+          setCurrentUser(userData);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchCurrentUser();
+    }
+  }, [user?.id, isLoaded]);
+
+  useEffect(() => {
+    console.log("Current user state updated:", currentUser);
+  }, [currentUser]);
+
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
       try {
         let filteredItems: MPItemWithId[] = [];
 
-        // Apply filters in order of specificity
         if (filters.category) {
           filteredItems = await getMPItemsByCategory(filters.category);
         } else if (
@@ -57,11 +89,9 @@ export default function MarketplacePage() {
             filters.maxPrice
           );
         } else {
-          // No filters, get all available items
           filteredItems = await getMPItemsByStatus(ITEM_STATUS.AVAILABLE);
         }
 
-        // Apply remaining filters in memory
         filteredItems = filteredItems.filter((item) => {
           let matches = true;
 
@@ -75,9 +105,7 @@ export default function MarketplacePage() {
             matches = matches && item.condition === filters.condition;
           }
 
-          // Ensure we only show available items
           matches = matches && item.status === ITEM_STATUS.AVAILABLE;
-
           return matches;
         });
 
@@ -91,9 +119,8 @@ export default function MarketplacePage() {
     };
 
     fetchItems();
-  }, [filters]);
+  }, [filters.minPrice, filters.maxPrice, filters.category, filters.condition]);
 
-  // Update URL when filters change
   const handleFilterChange = (newFilters: FilterState) => {
     const params = new URLSearchParams();
 
@@ -108,7 +135,8 @@ export default function MarketplacePage() {
     setFilters(newFilters);
   };
 
-  if (loading) return <Loading />;
+  // Wait for both items and user data to load
+  if (loading || userLoading || !isLoaded) return <Loading />;
 
   return (
     <div className="flex flex-col max-w-8xl mx-auto px-[125px] py-6">
@@ -126,6 +154,8 @@ export default function MarketplacePage() {
               key={item.id}
               itemId={item.id}
               type={ITEM_TYPE.MARKETPLACE}
+              itemData={item}
+              currentUser={currentUser}
             />
           ))}
           {items.length === 0 && (

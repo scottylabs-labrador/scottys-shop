@@ -14,7 +14,7 @@ import {
   statusColors,
   typeColors,
   conditionColors,
-} from "@/utils/ItemConstants";
+} from "@/utils/itemConstants";
 
 // Type Badge component
 export const TypeBadge = ({
@@ -75,16 +75,6 @@ export const ConditionBadge = ({
       : "bg-gray-100 text-gray-800";
 
   return <Badge className={colorClass}>{displayCondition}</Badge>;
-};
-
-// Turnaround Badge component
-export const TurnaroundBadge = ({ days }: { days: number }) => {
-  return (
-    <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-green-700">
-      <Clock className="h-4 w-4" />
-      <span>{days}d turnaround</span>
-    </div>
-  );
 };
 
 // Availability Badge that handles both commission and marketplace items

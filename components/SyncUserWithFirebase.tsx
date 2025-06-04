@@ -1,38 +1,38 @@
-/**
+/** SyncUserWithFirebase.tsx
  * Component to synchronize Clerk user data with Firebase
  * Ensures user data consistency between authentication and database
  */
 "use client";
-
 import { useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
-import { getUserByClerkId, createUser, updateUser } from "@/firebase/users";
 
 export default function SyncUserWithFirebase() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
-    if (!user) return;
+    // Wait for Clerk to finish loading and ensure user exists
+    if (!isLoaded || !user) return;
 
     const syncUser = async () => {
       try {
-        // Check if user exists in Firebase
-        const existingUser = await getUserByClerkId(user.id);
+        // Use the API endpoint for consistency
+        const response = await fetch("/api/users/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-        const userData = {
-          name: `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim(),
-          email: user.emailAddresses[0]?.emailAddress ?? "",
-          clerkId: user.id,
-          avatarUrl: user.imageUrl,
-          andrewId: user.emailAddresses[0]?.emailAddress?.split("@")[0] ?? "",
-          createdAt: Date.now(),
-        };
+        if (!response.ok) {
+          throw new Error(`Sync failed: ${response.statusText}`);
+        }
 
-        if (existingUser) {
-          return;
+        const result = await response.json();
+
+        if (result.success) {
+          console.log("User sync successful");
         } else {
-          // Create new user
-          await createUser(userData);
+          console.error("User sync failed:", result.error);
         }
       } catch (error) {
         console.error("Error syncing user:", error);
@@ -40,7 +40,7 @@ export default function SyncUserWithFirebase() {
     };
 
     syncUser();
-  }, [user]);
+  }, [user, isLoaded]);
 
   return null;
 }
