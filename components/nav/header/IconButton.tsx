@@ -20,7 +20,7 @@ const IconButton = ({
   className = "p-2 hover:bg-gray-100 rounded-full",
 }: IconButtonProps) => (
   <button type="button" className={className} onClick={onClick} title={title}>
-    <Icon className="w-6 h-6 hover:text-[#C41230]" />
+    <Icon className="w-6 h-6 hover:text-black" />
   </button>
 );
 

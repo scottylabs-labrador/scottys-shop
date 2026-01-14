@@ -82,3 +82,10 @@ export const isItemAvailable = (
     return item.status === "Available";
   }
 };
+
+export const formatDate = (timestamp: number) => {
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+};

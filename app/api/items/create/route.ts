@@ -4,6 +4,7 @@ import { getUserByClerkId } from "@/firebase/users";
 import { createCommItem } from "@/firebase/commItems";
 import { createMPItem } from "@/firebase/mpItems";
 import { ITEM_STATUS } from "@/utils/itemConstants";
+import { hasPaymentPlatforms } from "@/utils/userConstants";
 import { ClerkID } from "@/utils/types";
 
 export async function POST(request: NextRequest) {
@@ -16,6 +17,18 @@ export async function POST(request: NextRequest) {
     const user = await getUserByClerkId(clerkId as ClerkID);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user has payment methods configured
+    if (!hasPaymentPlatforms(user)) {
+      return NextResponse.json(
+        {
+          error: "Payment methods required",
+          message:
+            "You must configure at least one payment method before creating items",
+        },
+        { status: 400 }
+      );
     }
 
     const body = await request.json();
@@ -76,12 +89,14 @@ export async function POST(request: NextRequest) {
         condition,
         status: ITEM_STATUS.AVAILABLE,
       };
+
       itemId = await createMPItem(marketplaceData);
     } else {
       const commissionData = {
         ...baseItemData,
         isAvailable: true,
       };
+
       itemId = await createCommItem(commissionData);
     }
 

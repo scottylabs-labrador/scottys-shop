@@ -31,9 +31,9 @@ const ProfileDropdown = () => {
         if (response.ok) {
           const userData: User = await response.json();
           setUserData(userData);
-          setAvatarUrl(userData.avatarUrl || user.imageUrl || null);
+          setAvatarUrl(userData.avatarUrl || null);
         } else {
-          setAvatarUrl(user.imageUrl || null);
+          setAvatarUrl(null);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);

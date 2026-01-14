@@ -26,7 +26,7 @@ const NavigationLink = ({
     onClick={onClick}
   >
     {children}
-    <div className="absolute bottom-[-10px] left-0 w-full h-[3] bg-[#C41230] transform scale-x-0 group-hover:scale-x-100" />
+    <div className="absolute bottom-[-10px] left-0 w-full h-[3] bg-black transform scale-x-0 group-hover:scale-x-100" />
   </Link>
 );
 

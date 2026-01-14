@@ -7,6 +7,7 @@ import Header from "@/components/nav/Header";
 import Banner from "@/components/nav/Banner";
 import SyncUserWithFirebase from "@/components/SyncUserWithFirebase";
 
+// Font imports
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -50,11 +51,16 @@ export default function RootLayout({
         <ClerkProvider>
           <SyncUserWithFirebase />
           <main className="min-h-[calc(100vh-4rem)] pt-[125px] relative z-0 overscroll-none">
+            {/* Persistent header and banner */}
             <div className="fixed top-0 w-full z-[100]">
               <Banner />
               <Header />
             </div>
+
+            {/* Main site content */}
             <div className="max-w-8xl mx-auto px-3">{children}</div>
+
+            {/* Footer */}
           </main>
         </ClerkProvider>
       </body>

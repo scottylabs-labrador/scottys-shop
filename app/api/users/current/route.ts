@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Return user data without sensitive IDs
     const safeUserData = {
       andrewId: user.andrewId,
-      name: user.name,
+      username: user.username,
       email: user.email,
       avatarUrl: user.avatarUrl,
       shopBanner: user.shopBanner,

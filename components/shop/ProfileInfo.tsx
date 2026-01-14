@@ -1,12 +1,14 @@
 /**
  * Profile information component for shop profiles
- * Displays avatar and basic user information
+ * Displays avatar and basic user information with payment methods using Simple Icons
  */
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Camera, Calendar } from "lucide-react";
 import { User } from "@/utils/types";
+import { formatDate } from "@/utils/helperFunctions";
+import PaymentBadges from "@/components/shop/PaymentPlatformBadges";
 
 interface ProfileInfoProps {
   shopOwner: User | null;
@@ -22,13 +24,6 @@ const ProfileInfo = ({
   setUploadType,
 }: ProfileInfoProps) => {
   if (!shopOwner) return null;
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  };
 
   return (
     <div className="bg-white rounded-lg">
@@ -58,7 +53,7 @@ const ProfileInfo = ({
             )}
           </div>
           <span className="font-semibold text-2xl text-gray-900 font-rubik">
-            {shopOwner.andrewId}
+            {shopOwner.username}
           </span>
         </div>
         <div className="text-center space-y-2">
@@ -66,6 +61,11 @@ const ProfileInfo = ({
             <Calendar className="w-4 h-4 flex-shrink-0" />
             <span>Shop opened {formatDate(shopOwner.createdAt)}</span>
           </div>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="w-full">
+          <PaymentBadges user={shopOwner} className="justify-start" />
         </div>
       </div>
     </div>

@@ -104,10 +104,8 @@ export default function FavoritesPage() {
   if (!isLoaded || isLoading) return <Loading />;
 
   return (
-    <div className="max-w-8xl mx-auto px-[125px] py-6">
-      <h1 className="text-5xl font-caladea mb-6 border-b-4 border-[#C41230] pb-2">
-        Favorites
-      </h1>
+    <div className="max-w-8xl mx-auto px-12 py-8 font-rubik">
+      <h1 className="text-2xl text-medium text-gray-900 mb-5">Favorites</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6">
         {favorites.map((item) => (

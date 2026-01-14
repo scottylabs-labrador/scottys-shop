@@ -1,14 +1,20 @@
+/**
+ * ItemCard Component
+ * Displays individual item details with actions for marketplace or commission items
+ * Handles hover effects, favorites, editing, and deletion
+ * All components located in components/items/itemcard/
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import ItemCardImage from "@/components/items/itemcard/ItemCardImage";
 import ItemCardDetails from "@/components/items/itemcard/ItemCardDetails";
 import ItemCardActions from "@/components/items/itemcard/ItemCardActions";
 import DeleteItemDialog from "@/components/items/itemcard/DeleteItemDialog";
-import { ITEM_STATUS, ITEM_TYPE } from "@/utils/itemConstants";
+import { ITEM_TYPE } from "@/utils/itemConstants";
 import { isItemAvailable } from "@/utils/helperFunctions";
 import { User } from "@/utils/types";
 

@@ -65,7 +65,7 @@ const MobileMenu = ({ isOpen, onClose, unreadCount }: MobileMenuProps) => {
             >
               <span>Messages</span>
               {unreadCount > 0 && (
-                <span className="bg-[#C41230] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="bg-black text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}

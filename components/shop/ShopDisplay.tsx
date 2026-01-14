@@ -9,7 +9,7 @@ import { Store, Pencil } from "lucide-react";
 import ItemCard from "@/components/items/ItemCard";
 import { useToast } from "@/hooks/use-toast";
 import Loading from "@/components/utils/Loading";
-import { AndrewID } from "@/utils/types";
+import { User } from "@/utils/types";
 
 interface ShopItem {
   id: string;
@@ -20,7 +20,7 @@ interface ShopItem {
 }
 
 interface ShopDisplayProps {
-  andrewId: AndrewID;
+  currentUser: User | null;
   isOwnShop?: boolean;
   isDashboard?: boolean;
   isEditing?: boolean;
@@ -28,7 +28,7 @@ interface ShopDisplayProps {
 }
 
 export default function ShopDisplay({
-  andrewId,
+  currentUser,
   isOwnShop = false,
   isDashboard = false,
   isEditing = false,
@@ -39,17 +39,21 @@ export default function ShopDisplay({
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchItems();
-  }, [andrewId]);
+    if (!currentUser) {
+      return;
+    }
 
-  const fetchItems = async () => {
-    if (!andrewId) return;
+    fetchItems();
+  }, [currentUser]);
+
+  const   fetchItems = async () => {
+    if (!currentUser) return;
 
     setLoading(true);
     try {
       const [commResponse, mpResponse] = await Promise.all([
-        fetch(`/api/users/${andrewId}/items/commission`),
-        fetch(`/api/users/${andrewId}/items/marketplace`),
+        fetch(`/api/users/${currentUser.andrewId}/items/commission`),
+        fetch(`/api/users/${currentUser.andrewId}/items/marketplace`),
       ]);
 
       const commItems = commResponse.ok ? await commResponse.json() : [];
@@ -139,6 +143,7 @@ export default function ShopDisplay({
                 itemId={item.id}
                 type={item.type === "COMMISSION" ? "Commission" : "Marketplace"}
                 isDashboard={false}
+                currentUser={currentUser}
               />
             </div>
           ))}

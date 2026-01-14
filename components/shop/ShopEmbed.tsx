@@ -18,9 +18,13 @@ import { ShopFormData, User, AndrewID } from "@/utils/types";
 
 type ShopComponentProps = {
   andrewId: AndrewID;
+  containerized?: boolean;
 };
 
-export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
+export const ShopEmbed = ({
+  andrewId,
+  containerized = false,
+}: ShopComponentProps) => {
   const { toast } = useToast();
   const { isSignedIn, user } = useUser();
   const pathname = usePathname();
@@ -46,6 +50,21 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
   const isDashboard = useMemo(() => {
     return pathname?.includes("/dashboard");
   }, [pathname]);
+
+  // Dynamic container styling based on containerized prop
+  const containerClasses = useMemo(() => {
+    if (containerized) {
+      return "w-full h-full bg-white"; // Fit container, no min-height
+    }
+    return "min-h-screen bg-white"; // Full page layout
+  }, [containerized]);
+
+  const contentClasses = useMemo(() => {
+    if (containerized) {
+      return "w-full px-4 py-4"; // Contained padding
+    }
+    return "mx-auto max-w-7xl py-4"; // Full page max-width and centering
+  }, [containerized]);
 
   // Fetch shop owner data
   useEffect(() => {
@@ -291,7 +310,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className={containerClasses}>
       <form onSubmit={handleSave}>
         <BannerSection
           bannerUrl={bannerUrl}
@@ -301,9 +320,13 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
           handleResetBanner={handleResetBanner}
         />
 
-        <div className="mx-auto max-w-7xl py-4">
-          <div className="flex flex-col md:flex-row gap-5">
-            <div className="md:w-80 flex-shrink-0 justifyContent-start">
+        <div className={contentClasses}>
+          <div
+            className={`flex ${containerized ? "flex-col lg:flex-row" : "flex-col md:flex-row"} gap-5`}
+          >
+            <div
+              className={`${containerized ? "lg:w-80" : "md:w-80"} flex-shrink-0 justifyContent-start`}
+            >
               <ProfileInfo
                 shopOwner={shopOwner}
                 avatarUrl={avatarUrl}
@@ -329,7 +352,7 @@ export const ShopEmbed = ({ andrewId }: ShopComponentProps) => {
               </div>
 
               <ShopDisplay
-                andrewId={andrewId}
+                currentUser={currentUser}
                 isOwnShop={isOwnShop}
                 isDashboard={isDashboard}
                 isEditing={isEditing}

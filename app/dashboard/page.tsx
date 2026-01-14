@@ -16,7 +16,10 @@ export default function SellerDashboard() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!isSignedIn || !user?.id) return;
+      if (!isSignedIn || !user?.id) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
@@ -59,7 +62,13 @@ export default function SellerDashboard() {
 
     switch (activeTab) {
       case "shop":
-        return <ShopEmbed andrewId={andrewId} />;
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="w-full h-full">
+              <ShopEmbed andrewId={andrewId} containerized={true} />
+            </div>
+          </div>
+        );
       case "items":
         return <ItemDashboard andrewId={andrewId} />;
       case "past sales":
@@ -71,54 +80,62 @@ export default function SellerDashboard() {
           </div>
         );
       default:
-        return <ShopEmbed andrewId={andrewId} />;
+        return (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-0">
+              <ShopEmbed andrewId={andrewId} />
+            </div>
+          </div>
+        );
     }
   };
 
   return (
-    <div className="flex-col md:flex-row max-w-6xl align-center mx-auto px-4 py-4">
-      <span>
-        <h1 className="text-5xl font-caladea mb-6 border-b-4 border-[#C41230] pb-2">
+    <div className="min-h-screen font-rubik">
+      <div className="max-w-8xl mx-auto px-12 py-8">
+        <h1 className="text-2xl font-normal text-gray-900 mb-5">
           Seller Dashboard
         </h1>
-      </span>
-      {/* Tabs Navigation */}
-      <div className="flex mb-6">
-        <div className="flex space-x-8 text-left font-rubik font-semibold">
-          <button
-            onClick={() => setActiveTab("shop")}
-            className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
-              activeTab === "shop"
-                ? "border-black text-gray-900 font-medium"
-                : "border-transparent text-gray-400 hover:text-gray-500"
-            }`}
-          >
-            Shop
-          </button>
-          <button
-            onClick={() => setActiveTab("items")}
-            className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
-              activeTab === "items"
-                ? "border-black text-gray-900 font-medium"
-                : "border-transparent text-gray-400 hover:text-gray-500"
-            }`}
-          >
-            Items
-          </button>
-          <button
-            onClick={() => setActiveTab("past sales")}
-            className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
-              activeTab === "past sales"
-                ? "border-black text-gray-900 font-medium"
-                : "border-transparent text-gray-400 hover:text-gray-500"
-            }`}
-          >
-            Past Sales
-          </button>
+
+        {/* Tabs Navigation */}
+        <div className="flex mb-6">
+          <div className="flex space-x-8 text-left font-rubik font-semibold">
+            <button
+              onClick={() => setActiveTab("shop")}
+              className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
+                activeTab === "shop"
+                  ? "border-black text-gray-900 font-medium"
+                  : "border-transparent font-medium hover:font-medium text-gray-400 hover:text-gray-500"
+              }`}
+            >
+              Shop
+            </button>
+            <button
+              onClick={() => setActiveTab("items")}
+              className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
+                activeTab === "items"
+                  ? "border-black text-gray-900 font-medium"
+                  : "border-transparent font-medium hover:font-medium text-gray-400 hover:text-gray-500"
+              }`}
+            >
+              Items
+            </button>
+            <button
+              onClick={() => setActiveTab("past sales")}
+              className={`py-2 px-0 text-sm border-b-[3px] transition-colors flex items-center gap-2 ${
+                activeTab === "past sales"
+                  ? "border-black text-gray-900 font-medium"
+                  : "border-transparent font-medium hover:font-medium text-gray-400 hover:text-gray-500"
+              }`}
+            >
+              Past Sales
+            </button>
+          </div>
         </div>
+
+        {/* Tab Content */}
+        <div className="mt-0">{renderTabContent()}</div>
       </div>
-      {/* Tab Content */}
-      <div className="mt-0">{renderTabContent()}</div>
     </div>
   );
 }

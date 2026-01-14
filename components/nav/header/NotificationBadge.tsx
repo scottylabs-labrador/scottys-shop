@@ -19,7 +19,7 @@ const NotificationBadge = ({
 
   return (
     <div
-      className={`absolute -top-2 -right-2 bg-[#C41230] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${className}`}
+      className={`absolute -top-2 -right-2 bg-black text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${className}`}
     >
       {count > 99 ? "99+" : count}
     </div>

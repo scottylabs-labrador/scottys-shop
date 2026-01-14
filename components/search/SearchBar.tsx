@@ -120,7 +120,7 @@ const SearchBar = () => {
             onChange={handleInputChange}
             onFocus={() => query.length >= 2 && setShowResults(true)}
             placeholder="Search for items, commissions, and more..."
-            className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C41230] focus:border-transparent font-rubik"
+            className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent font-rubik"
           />
           {query && (
             <button
@@ -222,7 +222,7 @@ const SearchBar = () => {
               <p>No results found for &quot;{query}&quot;</p>
               <button
                 onClick={handleSubmit}
-                className="mt-2 text-sm text-[#C41230] hover:underline"
+                className="mt-2 text-sm text-black hover:underline"
               >
                 View all search results
               </button>

@@ -1,7 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher(["/inbox(.*)", "/requests(.*)"]);
+// These are routes that only function when a user is signed in
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/chats(.*)",
+  "/favorites(.*)",
+  "/account(.*)",
+  "/item/create(.*)",
+  "/item/edit(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
